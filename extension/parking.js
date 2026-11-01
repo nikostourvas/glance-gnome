@@ -12,7 +12,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
-import {EDGE_SETTINGS, enabledEdges, zoneFraction} from './config.js';
+import {EDGE_SETTINGS, enabledEdges} from './config.js';
 import {Ticker, clearDrawn, forgetDrawn, frameRect, setDrawn} from './draw.js';
 
 // A window going back to full size gives up waiting for its app after this
@@ -249,16 +249,6 @@ export class ParkedWindows {
     lineOf(window) {
         const parked = this._parked.get(window);
         return this.line(parked.edge, parked.monitor);
-    }
-
-    // A window fills a half of main, full height.
-    fillHalf(window, side, monitor) {
-        const from = this.drawnRect(window);
-        this.release(window);
-        if (window.get_maximize_flags() !== 0)
-            window.unmaximize();
-        const rect = G.halfRect(side, screenOf(monitor), workAreaOf(monitor), zoneFraction(this._settings));
-        this.restore(window, rect, {width: rect.width, height: rect.height}, monitor, from);
     }
 
     // Stops managing a window (a drag takes it over); the column it leaves

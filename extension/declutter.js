@@ -1,11 +1,13 @@
 // Declutter, Super+double-click: on a tile, it is unparked (see
-// ParkedWindows.unpark); on another window, it fills the half of main
-// nearer to it, full height, and every other window in main is parked (at
-// the enabled side edges, balanced, else at the enabled top and bottom;
-// Glance puts them in its stashes); on the
-// empty desktop, main is just cleared. The same Super+double-click again
-// undoes it. Shaking a dragged window only parks the others (no undo).
-// Glance's kwin/declutter.cpp and docs/declutter.md.
+// ParkedWindows.unpark); on another window, it moves to the middle of the
+// screen (at its size, smaller only if it doesn't fit) and the windows in
+// its way are pushed aside, left or right of it, at their size, clear of
+// where tiles go (Glance
+// fills the nearer half of the screen and stashes the others); on the empty
+// desktop, every window is parked (at the enabled side edges, balanced, else
+// at the enabled top and bottom). The same Super+double-click again undoes
+// it. Shaking a dragged window only parks the others (no undo). Glance's
+// kwin/declutter.cpp and docs/declutter.md.
 
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
@@ -18,7 +20,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as G from './geometry.js';
 import {enabledEdges} from './config.js';
 import {clearDrawn, frameRect} from './draw.js';
-import {screenOf} from './parking.js';
+import {screenOf, workAreaOf} from './parking.js';
 
 const SUPER = Clutter.ModifierType.SUPER_MASK | Clutter.ModifierType.MOD4_MASK;
 
@@ -30,12 +32,24 @@ function now() {
     return GLib.get_monotonic_time() / 1000;
 }
 
-// Windows declutter moves: ordinary windows shown on the active workspace.
+// Windows declutter moves: ordinary windows shown on the active workspace
+// (maximized ones too, unmaximized first, though Mutter doesn't let them be
+// resized while maximized).
 function manageable(window) {
     return window.get_window_type() === Meta.WindowType.NORMAL && !window.minimized &&
-        !window.is_fullscreen() && !window.is_skip_taskbar() &&
-        window.allows_move() && window.allows_resize() && !!window.get_compositor_private() &&
+        !window.is_fullscreen() && !window.is_skip_taskbar() && window.allows_move() &&
+        (window.allows_resize() || window.get_maximize_flags() !== 0) && !!window.get_compositor_private() &&
         window.located_on_workspace(global.workspace_manager.get_active_workspace());
+}
+
+function overlap(a, b) {
+    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+// Whether `r` is (about) at `place`.
+function isAt(r, place) {
+    return Math.abs(r.x - place.x) <= 2 && Math.abs(r.y - place.y) <= 2 &&
+        Math.abs(r.width - place.width) <= 2 && Math.abs(r.height - place.height) <= 2;
 }
 
 // Resolves once the window has a new size (or after `ms`).
@@ -123,8 +137,8 @@ export class Declutter {
         }
         const last = this._last;
         const again = last && (target
-            ? last.target === target && !this._parking.get(target) &&
-                G.sideOf(frameRect(target), screenOf(last.monitor)) === last.half
+            ? last.target === target && !this._parking.isParked(target) && last.center &&
+                isAt(frameRect(target), last.center)
             : last.desktop);
         if (again) {
             this._undo();
@@ -134,17 +148,65 @@ export class Declutter {
             ? this._parking.monitorOf(target)
             : global.display.get_monitor_index_for_rect(
                 new Mtk.Rectangle({x: Math.round(x), y: Math.round(y), width: 1, height: 1}));
-        const layout = {desktop: !target, target, half: null, monitor, saved: this._snapshot(monitor)};
+        const layout = {desktop: !target, target, center: null, monitor, saved: this._snapshot(monitor)};
+        this._last = layout;
         if (target) {
-            console.debug(`glance: ${target.get_title()}: declutter`);
-            layout.half = G.sideOf(this._parking.drawnRect(target), screenOf(monitor));
-            this._parking.fillHalf(target, layout.half, monitor);
+            console.debug(`glance: ${target.get_title()}: to the middle`);
             target.activate(global.get_current_time());
+            this._center(target, monitor, layout).catch(logError);
         } else {
             console.debug('glance: declutter the desktop');
+            this._scatter(null, monitor).catch(logError);
         }
-        this._last = layout;
-        this._scatter(target, monitor).catch(logError);
+    }
+
+    // `target` to the middle of the work area, at its size (smaller only if
+    // it doesn't fit), and the windows overlapping it there pushed aside,
+    // left or right of it (by which side of it their middle is on), at
+    // their size, gliding there, but not over the enabled edges' tiles
+    // (see G.clearOfTiles). One too wide to fit beside it stays against
+    // that room's edge, partly behind it.
+    async _center(target, monitor, layout) {
+        const others = this._windows(monitor).filter(w => w !== target && !this._parking.isParked(w));
+        await this._unmaximize([target, ...others]);
+        if (this._destroyed || this._last !== layout)
+            return;
+
+        const area = workAreaOf(monitor);
+        const frame = frameRect(target);
+        const width = Math.min(frame.width, area.width);
+        const height = Math.min(frame.height, area.height);
+        const center = {
+            x: Math.round(area.x + (area.width - width) / 2),
+            y: Math.round(area.y + (area.height - height) / 2),
+            width, height,
+        };
+        layout.center = center;
+        this._parking.restore(target, center, {width, height}, monitor, this._parking.drawnRect(target));
+
+        const room = G.clearOfTiles(screenOf(monitor), area, enabledEdges(this._settings));
+
+        for (const window of others) {
+            const rect = frameRect(window);
+            if (!overlap(rect, center))
+                continue;
+            const left = rect.x + rect.width / 2 < center.x + center.width / 2;
+            const aside = G.keptIn({...rect, x: left ? center.x - rect.width : center.x + center.width}, room);
+            this._parking.restore(window, aside, {width: rect.width, height: rect.height}, monitor, rect);
+        }
+    }
+
+    // Unmaximizes those of `windows` that are, noting where they are then
+    // in the last declutter's snapshot: undo maximizes them from there, so
+    // unmaximizing them later puts them back there too.
+    async _unmaximize(windows) {
+        const maximized = windows.filter(w => w.get_maximize_flags() !== 0);
+        maximized.forEach(w => w.unmaximize());
+        await Promise.all(maximized.map(w => sizeChanged(w)));
+        for (const item of this._last?.saved ?? []) {
+            if (maximized.includes(item.window))
+                item.unmaximized = frameRect(item.window);
+        }
     }
 
     // Every manageable window on `monitor`, as it is now.
@@ -165,7 +227,7 @@ export class Declutter {
             .filter(w => manageable(w) && this._parking.monitorOf(w) === monitor);
     }
 
-    // Every window in main on `monitor` but `except` is parked, the parking
+    // Every window on `monitor` but `except` is parked, the parking
     // columns balanced.
     async _scatter(except, monitor) {
         const movers = this._windows(monitor).filter(w => w !== except && !this._parking.isParked(w));
@@ -173,9 +235,7 @@ export class Declutter {
             return;
 
         // A maximized window is parked at its own (unmaximized) size.
-        const maximized = movers.filter(w => w.get_maximize_flags() !== 0);
-        maximized.forEach(w => w.unmaximize());
-        await Promise.all(maximized.map(w => sizeChanged(w)));
+        await this._unmaximize(movers);
         if (this._destroyed)
             return;
 
@@ -210,7 +270,7 @@ export class Declutter {
         this._last = null;
         console.debug('glance: undo declutter');
         const open = new Set(global.get_window_actors().map(a => a.meta_window));
-        for (const {window, parked, frame, maximized} of last.saved) {
+        for (const {window, parked, frame, maximized, unmaximized} of last.saved) {
             if (!open.has(window))
                 continue;
             const from = this._parking.drawnRect(window);
@@ -225,6 +285,10 @@ export class Declutter {
             } else if (maximized) {
                 this._parking.release(window);
                 clearDrawn(window);
+                if (unmaximized) {
+                    window.move_resize_frame(true, unmaximized.x, unmaximized.y,
+                        unmaximized.width, unmaximized.height);
+                }
                 window.maximize();
             } else if (current || !G.near(frameRect(window).x, frame.x) ||
                        !G.near(frameRect(window).y, frame.y) || !G.near(frameRect(window).width, frame.width)) {

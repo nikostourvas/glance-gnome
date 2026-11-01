@@ -29,9 +29,12 @@ Glance](#differences-from-glance)).
   the middle of the screen: the window gets its size back where it is
   dropped. Tiles are easiest to drag with Super+drag (from anywhere in the
   tile).
-- **Declutter.** Super+double-click a (not parked) window: it fills the half of the
-  screen nearer to it, full height, and every other window is parked.
-  Super+double-click the empty desktop to park everything. The same
+- **Centering.** Super+double-click a (not parked) window: it moves to the
+  middle of the screen at its size (smaller only if it doesn't fit), and the
+  windows in its way are pushed aside to its left and right, at their size,
+  leaving room for tiles at the edges.
+  Handy to bring what you are working on straight ahead.
+  Super+double-click the empty desktop to park every window. The same
   Super+double-click again undoes it.
 - **Shake.** Shake a window from side to side while dragging it, and every
   other window is parked.
@@ -114,7 +117,9 @@ Glance's design, from its `docs/`, is the basis. By choice, this extension
 has no stashes (Glance keeps windows dropped before the very edge where and
 as large as drawn), keeps parked apps at their size (Glance lays them out as
 phone-sized squares), shows the whole window in previews, moves neighbouring
-tiles out of a preview's way, shrinks windows by the pointer's distance to
+tiles out of a preview's way, centers a Super+double-clicked window
+instead of filling the nearer half of the screen and stashing the rest,
+shrinks windows by the pointer's distance to
 an edge rather than the window's, in narrower zones (Glance: the window's
 edge within 25% of the screen per side), and can park at the top and
 bottom. Not ported: tilted

@@ -7,7 +7,8 @@
 // - drag.js: shrinking while dragging.
 // - parking.js: parked windows, their columns and rows.
 // - previews.js: hovering a tile grows it.
-// - declutter.js: Super+double-click and shaking park the other windows.
+// - declutter.js: Super+double-click centers a window or parks everything;
+//   shaking parks the other windows.
 // - geometry.js: the rules, as pure functions.
 // - config.js: the settings (prefs.js edits them).
 // - compat.js: sharing the screen edges with Tiling Assistant.

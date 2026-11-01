@@ -4,8 +4,8 @@
 // kwin/geometry.cpp and kwin/tuning.h (https://github.com/scottjenson/Glance).
 
 // The edge zones' width, as a fraction of the screen width, is a setting
-// (see config.js; the top and bottom zones are as thick); main is the rest.
-// (Glance: 0.25, main the middle half, and only the side edges.)
+// (see config.js; the top and bottom zones are as thick). (Glance: 0.25,
+// and only the side edges.)
 // Scale at the very edge of the screen.
 export const minScale = 0.15;
 // But parking icons are at least this on their longer side.
@@ -30,9 +30,8 @@ export const shakeTurns = 3;
 export const shakeStroke = 30;
 export const shakeTime = 500;
 
-// The halves of main, and the screen edges windows park at: a column at
-// each side, a row at the top and at the bottom.
-export const Side = {LEFT: 0, RIGHT: 1};
+// The screen edges windows park at: a column at each side, a row at the
+// top and at the bottom.
 export const Edge = {LEFT: 0, RIGHT: 1, TOP: 2, BOTTOM: 3};
 
 export function isRow(edge) {
@@ -94,10 +93,6 @@ export function parkingScale(original) {
     return clamp(parkingMinSize / Math.max(original.width, original.height), minScale, 1);
 }
 
-export function sideOf(r, screen) {
-    return r.x + r.width / 2 < screen.x + screen.width / 2 ? Side.LEFT : Side.RIGHT;
-}
-
 // A parking tile: a window of full size `original` drawn parkingTile on its
 // longer side (less for a window smaller than that at parking size),
 // against `edge` (for the top and bottom, the work area `area`'s: below the
@@ -124,18 +119,22 @@ export function lineCenter(edge, r) {
     return r[pos] + r[size] / 2;
 }
 
-// Main, the part of the screen between the side edge zones (`zone`, a
-// fraction of the screen width), full height.
-export function mainRect(screen, zoneFraction) {
-    const zone = screen.width * zoneFraction;
-    return {x: screen.x + zone, y: screen.y, width: screen.width - 2 * zone, height: screen.height};
-}
-
-// A half of main, the height of the work area `area`.
-export function halfRect(side, screen, area, zoneFraction) {
-    const main = mainRect(screen, zoneFraction);
-    const width = main.width / 2;
-    return {x: main.x + (side === Side.LEFT ? 0 : width), y: area.y, width, height: area.height};
+// The part of the work area `area` clear of the lines of tiles at `edges`
+// (a tile's thickness and a gap in from each, whether tiles are there or
+// not), where declutter pushes windows aside to.
+export function clearOfTiles(screen, area, edges) {
+    const thickness = parkingTile + arrangeGap;
+    let left = area.x, right = area.x + area.width;
+    let top = area.y, bottom = area.y + area.height;
+    if (edges.includes(Edge.LEFT))
+        left = Math.max(left, screen.x + thickness);
+    if (edges.includes(Edge.RIGHT))
+        right = Math.min(right, screen.x + screen.width - thickness);
+    if (edges.includes(Edge.TOP))
+        top += thickness;
+    if (edges.includes(Edge.BOTTOM))
+        bottom -= thickness;
+    return {x: left, y: top, width: right - left, height: bottom - top};
 }
 
 // `box` moved as little as needed to lie within `area` (a bigger box keeps

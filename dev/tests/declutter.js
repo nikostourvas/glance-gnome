@@ -7,6 +7,8 @@ if (target === 'desktop') {
     [x, y] = [20, 600];
 } else {
     const w = global.get_window_actors().map(a => a.meta_window).find(w => w.get_wm_class() === target);
+    w.activate(global.get_current_time()); // on top, so the clicks land on it
+    await dev.sleep(300);
     const a = w.get_compositor_private();
     const [ax, ay] = a.get_transformed_position();
     const [aw, ah] = a.get_transformed_size();
