@@ -9,6 +9,7 @@
     "user",
     "unlock-dialog"
   ],
-  "url": "https://github.com/scottjenson/Glance",
-  "settings-schema": "org.gnome.shell.extensions.glance-gnome"
+  "url": "https://github.com/nikostourvas/glance-gnome",
+  "settings-schema": "org.gnome.shell.extensions.glance-gnome",
+  "version-name": "0.1.0"
 }

@@ -1,13 +1,21 @@
 #!/bin/bash
 # Starts (or restarts) a nested GNOME Shell with the extension as it is now:
 # in a window, or with NESTED=headless without one (SIZE=2560x1080 sets its
-# screen). Log: dev/state/<window|headless>/shell.log.
+# screen). HOST_EXTENSIONS=1 also runs copies of the extensions enabled in the
+# real session, with copies of their settings (read only from the real
+# session). Log: dev/state/<window|headless>/shell.log.
 set -euo pipefail
 source "$(dirname "$(readlink -f "$0")")/common.sh"
 "$dev/stop-nested.sh"
 mkdir -p "$state"
 rm -f "$state/bus"
-setsid distrobox enter gnome-dev -- env NESTED="$mode" SIZE="${SIZE:-}" "$dev/nested-session.sh" \
+if [ -n "${HOST_EXTENSIONS:-}" ]; then
+    uuid=$(sed -n 's/.*"uuid": *"\([^"]*\)".*/\1/p' "$dev/../extension/metadata.json")
+    gnome-extensions list --enabled | grep -vxF "$uuid" >"$state/host-extensions"
+    dconf dump /org/gnome/shell/extensions/ >"$state/host-extension-settings.ini"
+fi
+setsid distrobox enter gnome-dev -- env NESTED="$mode" SIZE="${SIZE:-}" HOST_EXTENSIONS="${HOST_EXTENSIONS:-}" \
+    "$dev/nested-session.sh" \
     >"$state/shell.log" 2>&1 </dev/null &
 for _ in $(seq 60); do
     # Ready once started up (the shell opens the overview at the end of

@@ -160,7 +160,7 @@ export class ParkedWindows {
         const x = Math.round(kept.x);
         const y = Math.round(kept.y);
         if (resize) {
-            console.log(`glance: ${window.get_title()}: original ${original.width}x${original.height}, ` +
+            console.debug(`glance: ${window.get_title()}: original ${original.width}x${original.height}, ` +
                 `resize to ${layout.width}x${layout.height}`);
             window.move_resize_frame(true, x, y, layout.width, layout.height);
         } else {
@@ -177,7 +177,7 @@ export class ParkedWindows {
             shown: target, original, monitor, restoring: true,
             restoreBy: now() + RESTORE_WAIT,
         });
-        console.log(`glance: ${window.get_title()}: restore to ${original.width}x${original.height}`);
+        console.debug(`glance: ${window.get_title()}: restore to ${original.width}x${original.height}`);
         window.move_resize_frame(true, Math.round(target.x), Math.round(target.y),
             original.width, original.height);
         const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, RESTORE_WAIT + 50, () => {

@@ -4,7 +4,9 @@
 // around the cursor, linearly with that edge's depth into the zone, down to
 // minScale at the screen edge (for the top and bottom, the work area's:
 // below the top bar, above any bottom panel). Dropped while shrunk it is
-// parked, a tile at that edge; dropped in main it gets its full size back. Also: a
+// parked, a tile at that edge; dropped in main it gets its full size back.
+// Where Tiling Assistant snaps (the pointer at an edge), it does instead
+// (see compat.js). Also: a
 // Super+click (a Mutter move that never moved) and shaking go to
 // Declutter. Glance's kwin/drag.cpp.
 
@@ -21,10 +23,11 @@ import {workAreaOf} from './parking.js';
 const MOVES = new Set([Meta.GrabOp.MOVING, Meta.GrabOp.MOVING_UNCONSTRAINED]);
 
 export class WindowDrag {
-    constructor(parking, declutter, settings) {
+    constructor(parking, declutter, settings, tilingAssistant) {
         this._parking = parking;
         this._declutter = declutter;
         this._settings = settings;
+        this._tilingAssistant = tilingAssistant;
         this._drag = null;
         this._ticker = new Ticker(() => this._step());
         global.display.connectObject(
@@ -121,7 +124,8 @@ export class WindowDrag {
         };
         let edge = null;
         let rule = 1;
-        for (const e of enabledEdges(this._settings)) {
+        drag.snapping = this._tilingAssistant.snapsAt(px, py, area);
+        for (const e of drag.snapping ? [] : enabledEdges(this._settings)) {
             const scale = G.edgeScale(toScreen[e], toWindow[e], zone);
             if (scale < rule) {
                 edge = e;
@@ -200,6 +204,9 @@ export class WindowDrag {
         const {original} = drag;
         if (drag.total < G.parkBelow) {
             this._parking.drop(window, drag.drawn, original, drag.monitor, drag.edge);
+        } else if (drag.snapping) {
+            // Tiling Assistant places it.
+            clearDrawn(window);
         } else if (!drag.attached &&
                    (!G.near(frame.width, original.width) || !G.near(frame.height, original.height))) {
             // Back to full size, keeping the grabbed spot under the cursor.

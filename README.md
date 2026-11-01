@@ -1,55 +1,108 @@
 # Glance for GNOME
 
-A GNOME Shell extension (GNOME 50) porting the core of Scott Jenson's
-[Glance](https://github.com/scottjenson/Glance), a window-management
-experiment for wide monitors built for KDE Plasma. Glance's `docs/` describe
-the design; this port follows its rules and tuning.
+A GNOME Shell extension that parks windows at the screen edges. Drag a
+window toward an edge and it shrinks; let go and it becomes a small, live
+tile there. Hover a tile to see and use the window at full size.
 
-- Drag a window toward an enabled screen edge (left and right by default;
-  top and bottom can be turned on in the settings): it stays full size
-  until its edge goes into that edge's zone (2% of the screen width by
-  default), then shrinks around the cursor. The top and bottom zones start
-  at the usable area, below the top bar and above any bottom panel.
-- Drop it anywhere in an edge zone and it is **parked**: a 180 px tile in
-  a column at a side or a row along the top or bottom, still usable
-  (clicks, typing, scrolling and its menus work). The app keeps its size
-  and is only drawn small.
-- **Hover previews:** rest the pointer on a tile and it grows in place to
-  the window's full size (at most 60% of the screen wide), readable and
-  usable; the other tiles in its column (or row) move out of its way, so
-  you can use the whole preview without switching. Move onto another tile to
-  flip to it; the preview shrinks back and the column returns when the
-  pointer leaves.
-- Drag a tile back into main and it gets its original size back. Tiles are
-  easiest to move with Super+drag.
-- Leaving the overview (which shows parked windows at full size), parked
-  windows shrink back into their tiles instead of jumping there.
-- Tiles follow resolution, scale and monitor changes, and panels coming or
-  going: each goes back to its edge on its window's monitor.
-- **Declutter:** Super+double-click a window and it fills the half of main
-  nearer to it, full height, while every other window is parked (in the
-  two side columns, balanced). Super+double-click the empty desktop to just clear
-  main. The same Super+double-click again undoes it.
-- **Shake:** shake a window while dragging it and every other window is
-  parked; the dragged one lands wherever it is dropped.
-- **Settings** (the extension's preferences): which edges park windows, and
-  the edge zone width (1-20% of the screen width). Changes apply at once;
-  tiles at an edge switched off move to the nearest edge still on (or back
-  to full size if none is).
-- Edge tiling is turned off while the extension is on, and put back after.
+Based on Scott Jenson's [Glance](https://github.com/scottjenson/Glance), a
+window-management experiment for wide monitors on KDE Plasma, whose design
+and rules it follows, with some changes (see [Differences from
+Glance](#differences-from-glance)).
 
-## Status
+## Features
 
-A first prototype. Differences from Glance, by choice: no stashes (Glance
-keeps windows dropped before the very edge where and as large as drawn),
-parked apps keep their size (Glance lays them out as phone-sized squares),
-previews show the whole window, narrower edge zones, parking rows along
-the top and bottom. Not ported yet: tilted tiles,
-grabbing tiles anywhere, minimize = park, Meta+arrows, Meta+drag
-acceleration, Meta+wheel, the Alt+Tab map and clips. Known
-gaps: menus of a window whose frame Mutter keeps partly off screen may open
-in the wrong place; dialogs of a parked window open at full size where its
-frame is; X11 apps are untested.
+- **Parking.** Drag a window toward an enabled screen edge (left and right
+  by default; top and bottom in the settings). It stays full size until
+  its edge goes into that edge's zone (2% of the screen width by default),
+  then shrinks around the pointer. Drop it there and it becomes a 180 px
+  tile in a column at a side, or a row at the top or bottom. Tiles stay
+  live and usable: clicks, typing, scrolling and menus work. The app keeps
+  its size; it is only drawn small.
+- **Hover previews.** Rest the pointer on a tile and it grows in place to
+  the window's full size (at most 60% of the screen wide). The other tiles
+  in its line move out of the way, so the whole preview can be used. Move
+  onto another tile to switch to it; leave and it shrinks back.
+- **Unparking.** Drag a tile back into the middle of the screen and the
+  window gets its size back. Tiles are easiest to move with Super+drag
+  (from anywhere in the tile).
+- **Declutter.** Super+double-click a window: it fills the half of the
+  screen nearer to it, full height, and every other window is parked.
+  Super+double-click the empty desktop to park everything. The same
+  Super+double-click again undoes it.
+- **Shake.** Shake a window from side to side while dragging it, and every
+  other window is parked.
+- Leaving the overview, parked windows shrink back into their tiles; tiles
+  follow resolution, scale and monitor changes, and panels coming or going.
+
+## Requirements
+
+GNOME Shell 50 on Wayland. Developed on Fedora 44 (Bluefin).
+
+## Installation
+
+From a release: download the `.shell-extension.zip` and run
+
+    gnome-extensions install --force glance-gnome@nikostourvas.github.io.shell-extension.zip
+
+From source:
+
+    git clone https://github.com/nikostourvas/glance-gnome.git
+    cd glance-gnome
+    dev/install.sh
+
+Then log out and back in (GNOME on Wayland loads new extensions at login)
+and enable it:
+
+    gnome-extensions enable glance-gnome@nikostourvas.github.io
+
+or with the Extensions app or Extension Manager. To update, install again
+and log out and back in. To remove it:
+`gnome-extensions uninstall glance-gnome@nikostourvas.github.io`.
+
+## Settings
+
+In the extension's preferences (Extensions app, Extension Manager, or
+`gnome-extensions prefs glance-gnome@nikostourvas.github.io`):
+
+- **Parking areas:** which screen edges park windows. The top and bottom
+  rows sit inside the usable area, below the top bar and above any bottom
+  panel. The bottom works best on large screens.
+- **Edge zone width:** how close to an edge, in percent of the screen width
+  (1-20%), a window must be dragged to shrink and park.
+
+Changes apply at once. Tiles at an edge that is switched off move to the
+nearest edge still on, or back to full size if none is.
+
+## Compatibility
+
+- GNOME's own edge tiling (dragging a window to a side to fill half the
+  screen) is turned off while the extension is on, and put back after.
+- **Tiling Assistant** snaps a dragged window when the pointer reaches a
+  screen edge (within its 15 px preview area by default). With both on, drop
+  a window while it is shrinking, before the pointer gets there, and it
+  parks; push the pointer into that area and the window goes back to full
+  size and Tiling Assistant snaps it.
+- Other tiling extensions that react to dragging windows to screen edges
+  are untested and will likely compete with parking.
+
+## Known limitations
+
+- Dialogs of a parked window open at full size where its (invisible) frame
+  is.
+- A menu of a parked window can open in the wrong place if Mutter keeps the
+  window's frame partly off screen.
+- X11 (Xwayland) apps are untested.
+
+## Differences from Glance
+
+Glance's design, from its `docs/`, is the basis. By choice, this extension
+has no stashes (Glance keeps windows dropped before the very edge where and
+as large as drawn), keeps parked apps at their size (Glance lays them out as
+phone-sized squares), shows the whole window in previews, moves neighbouring
+tiles out of a preview's way, uses narrower edge zones (Glance: 25% of the
+screen per side), and can park at the top and bottom. Not ported: tilted
+tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
+Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 
 ## How it works
 
@@ -78,6 +131,10 @@ Then, on the host:
     NESTED=headless dev/shot.sh       # screenshot
     NESTED=headless dev/scale.sh 2    # change its monitor's scale (a resolution change)
     dev/prefs.sh                      # open the extension's settings in the nested shell
+    HOST_EXTENSIONS=1 dev/run-nested.sh  # also run copies of the real session's enabled
+                                         # extensions, with copies of their settings
+    dev/pack.sh                       # build dist/<uuid>.shell-extension.zip
+    dev/install.sh                    # install it in the real session
 
 Each nested session has its own settings, extensions and session bus under
 `dev/state/`; the real session isn't touched. `dev/devhelper` (loaded only

@@ -94,14 +94,14 @@ export class Declutter {
 
     // `window`, being dragged, was shaken.
     shake(window) {
-        console.log(`glance: ${window.get_title()}: shaken, park the others`);
+        console.debug(`glance: ${window.get_title()}: shaken, park the others`);
         this._last = null; // its snapshot no longer holds
         this._scatter(window, this._parking.monitorOf(window)).catch(logError);
     }
 
     _stageEvent(event) {
         if (event.type() !== Clutter.EventType.BUTTON_PRESS || event.get_button() !== Clutter.BUTTON_PRIMARY ||
-            !superHeld(event.get_state()) || Main.overview.visible)
+            !superHeld(event.get_state()) || Main.overview.visible || Main.sessionMode.isLocked)
             return;
         for (let actor = global.stage.get_event_actor(event); actor; actor = actor.get_parent()) {
             if (actor === Main.layoutManager._backgroundGroup || actor instanceof Meta.BackgroundActor) {
@@ -130,12 +130,12 @@ export class Declutter {
                 new Mtk.Rectangle({x: Math.round(x), y: Math.round(y), width: 1, height: 1}));
         const layout = {desktop: !target, target, half: null, monitor, saved: this._snapshot(monitor)};
         if (target) {
-            console.log(`glance: ${target.get_title()}: declutter`);
+            console.debug(`glance: ${target.get_title()}: declutter`);
             layout.half = G.sideOf(this._parking.drawnRect(target), screenOf(monitor));
             this._parking.fillHalf(target, layout.half, monitor);
             target.activate(global.get_current_time());
         } else {
-            console.log('glance: declutter the desktop');
+            console.debug('glance: declutter the desktop');
         }
         this._last = layout;
         this._scatter(target, monitor).catch(logError);
@@ -202,7 +202,7 @@ export class Declutter {
     _undo() {
         const last = this._last;
         this._last = null;
-        console.log('glance: undo declutter');
+        console.debug('glance: undo declutter');
         const open = new Set(global.get_window_actors().map(a => a.meta_window));
         for (const {window, parked, frame, maximized} of last.saved) {
             if (!open.has(window))

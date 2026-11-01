@@ -74,7 +74,8 @@ export class HoverPreviews {
     _update() {
         const preview = this._current();
         const [x, y, mods] = global.get_pointer();
-        if ((mods & BUTTONS) !== 0 || global.display.is_grabbed() || Main.overview.visible) {
+        if ((mods & BUTTONS) !== 0 || global.display.is_grabbed() || Main.overview.visible ||
+            Main.sessionMode.isLocked) {
             this._stopOpen();
             return;
         }
