@@ -1,14 +1,14 @@
-// Shrinking while dragging: a window is full size while it lies within main
-// (the middle of the screen); once one of its edges enters the zone of an
-// enabled screen edge (left, right, top, bottom: see config.js) it shrinks
-// around the cursor, linearly with that edge's depth into the zone, down to
-// minScale at the screen edge (for the top and bottom, the work area's:
-// below the top bar, above any bottom panel). Dropped while shrunk it is
-// parked, a tile at that edge; dropped in main it gets its full size back.
-// Where Tiling Assistant snaps (the pointer at an edge), it does instead
-// (see compat.js). Also: a
-// Super+click (a Mutter move that never moved) and shaking go to
-// Declutter. Glance's kwin/drag.cpp.
+// Shrinking while dragging: a dragged window is full size until the pointer
+// comes within the zone of an enabled screen edge (left, right, top, bottom:
+// see config.js); then it shrinks around the pointer, linearly with the
+// pointer's depth into the zone, down to minScale at the edge (for the top
+// and bottom, the work area's: below the top bar, above any bottom panel).
+// So a window of any size can be placed anywhere as long as the pointer
+// stays out of the zones. Dropped while shrunk it is parked, a tile at that
+// edge; dropped elsewhere it gets its full size back. Where Tiling
+// Assistant snaps (the pointer at an edge), it does instead (see
+// compat.js). Also: a Super+click (a Mutter move that never moved) and
+// shaking go to Declutter. Glance's kwin/drag.cpp.
 
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
@@ -107,15 +107,8 @@ export class WindowDrag {
         if (drag.attached)
             drag.original = {width: frame.width, height: frame.height};
         const {original} = drag;
-        // From the cursor to each enabled screen edge and to the window's
-        // edge on that side (at full size); the edge whose rule shrinks it
-        // most is where it parks.
-        const toWindow = {
-            [G.Edge.LEFT]: drag.attached ? px - frame.x : drag.gx * original.width,
-            [G.Edge.RIGHT]: drag.attached ? frame.x + frame.width - px : (1 - drag.gx) * original.width,
-            [G.Edge.TOP]: drag.attached ? py - frame.y : drag.gy * original.height,
-            [G.Edge.BOTTOM]: drag.attached ? frame.y + frame.height - py : (1 - drag.gy) * original.height,
-        };
+        // From the pointer to each enabled screen edge; the edge it is
+        // nearest within a zone is where it parks.
         const toScreen = {
             [G.Edge.LEFT]: px - screen.x,
             [G.Edge.RIGHT]: screen.x + screen.width - px,
@@ -126,7 +119,7 @@ export class WindowDrag {
         let rule = 1;
         drag.snapping = this._tilingAssistant.snapsAt(px, py, area);
         for (const e of drag.snapping ? [] : enabledEdges(this._settings)) {
-            const scale = G.edgeScale(toScreen[e], toWindow[e], zone);
+            const scale = G.pointerScale(toScreen[e], zone);
             if (scale < rule) {
                 edge = e;
                 rule = scale;
@@ -200,27 +193,24 @@ export class WindowDrag {
         if (!window.get_compositor_private())
             return;
 
-        const frame = frameRect(window);
         const {original} = drag;
         if (drag.total < G.parkBelow) {
             this._parking.drop(window, drag.drawn, original, drag.monitor, drag.edge);
         } else if (drag.snapping) {
             // Tiling Assistant places it.
             clearDrawn(window);
-        } else if (!drag.attached &&
-                   (!G.near(frame.width, original.width) || !G.near(frame.height, original.height))) {
-            // Back to full size, keeping the grabbed spot under the cursor.
+        } else if (!drag.attached) {
+            // Out of parking: full size, the grabbed spot under the pointer
+            // as far as the usable area allows (its title bar stays
+            // reachable), gliding there from where it was dropped.
             const [px, py] = global.get_pointer();
-            const target = {
+            const target = G.keptIn({
                 x: px - drag.gx * original.width,
                 y: py - drag.gy * original.height,
                 ...original,
-            };
-            this._parking.restore(window, target, original, drag.monitor);
+            }, workAreaOf(drag.monitor));
+            this._parking.restore(window, target, original, drag.monitor, drag.drawn);
         } else {
-            // Full size: the frame goes where it is drawn.
-            if (!drag.attached)
-                window.move_frame(true, Math.round(drag.drawn.x), Math.round(drag.drawn.y));
             clearDrawn(window);
         }
     }

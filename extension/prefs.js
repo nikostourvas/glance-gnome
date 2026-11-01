@@ -34,8 +34,8 @@ export default class GlancePreferences extends ExtensionPreferences {
         const zone = new Adw.PreferencesGroup({title: 'Edge Zone'});
         const width = new Adw.SpinRow({
             title: 'Edge zone width',
-            subtitle: 'How close to an edge a window must be dragged to shrink and park, ' +
-                'in percent of the screen width',
+            subtitle: 'How close to an edge the pointer must come for a dragged window to shrink ' +
+                'and park, in percent of the screen width',
             adjustment: new Gtk.Adjustment({lower: 1, upper: 20, step_increment: 0.5, page_increment: 1}),
             digits: 1,
         });

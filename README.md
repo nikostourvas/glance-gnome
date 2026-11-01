@@ -13,8 +13,10 @@ Glance](#differences-from-glance)).
 
 - **Parking.** Drag a window toward an enabled screen edge (left and right
   by default; top and bottom in the settings). It stays full size until
-  its edge goes into that edge's zone (2% of the screen width by default),
-  then shrinks around the pointer. Drop it there and it becomes a 180 px
+  the pointer comes within that edge's zone (2% of the screen width by
+  default), then shrinks around the pointer. Windows of any size can be
+  placed anywhere as long as the pointer stays out of the zones. Drop it in
+  a zone and it becomes a 180 px
   tile in a column at a side, or a row at the top or bottom. Tiles stay
   live and usable: clicks, typing, scrolling and menus work. The app keeps
   its size; it is only drawn small.
@@ -67,8 +69,9 @@ In the extension's preferences (Extensions app, Extension Manager, or
 - **Parking areas:** which screen edges park windows. The top and bottom
   rows sit inside the usable area, below the top bar and above any bottom
   panel. The bottom works best on large screens.
-- **Edge zone width:** how close to an edge, in percent of the screen width
-  (1-20%), a window must be dragged to shrink and park.
+- **Edge zone width:** how close to an edge the pointer must come, in
+  percent of the screen width (1-20%), for a dragged window to shrink and
+  park.
 
 Changes apply at once. Tiles at an edge that is switched off move to the
 nearest edge still on, or back to full size if none is.
@@ -99,8 +102,10 @@ Glance's design, from its `docs/`, is the basis. By choice, this extension
 has no stashes (Glance keeps windows dropped before the very edge where and
 as large as drawn), keeps parked apps at their size (Glance lays them out as
 phone-sized squares), shows the whole window in previews, moves neighbouring
-tiles out of a preview's way, uses narrower edge zones (Glance: 25% of the
-screen per side), and can park at the top and bottom. Not ported: tilted
+tiles out of a preview's way, shrinks windows by the pointer's distance to
+an edge rather than the window's, in narrower zones (Glance: the window's
+edge within 25% of the screen per side), and can park at the top and
+bottom. Not ported: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 

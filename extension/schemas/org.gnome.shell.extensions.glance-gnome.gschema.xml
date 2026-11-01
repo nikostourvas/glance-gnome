@@ -21,7 +21,7 @@
       <range min="1" max="20"/>
       <default>2</default>
       <summary>Edge zone width, in percent of the screen width</summary>
-      <description>How close to an enabled screen edge a window must be dragged to shrink, and to park when dropped.</description>
+      <description>How close to an enabled screen edge the pointer must come for a dragged window to shrink, and to park when dropped.</description>
     </key>
   </schema>
 </schemalist>

@@ -63,15 +63,15 @@ export function near(a, b) {
     return Math.abs(a - b) < 0.5;
 }
 
-// Scale at which a window, scaled around the cursor, has its edge on one
-// side at the point of the curve: full size until that edge enters the
-// edge zone, then falling linearly to minScale at the screen edge. The
-// drawn edge is at d = cursorToScreenEdge - cursorToWindowEdge * s from
-// the screen edge (the latter measured at full size), and
-// s = minScale + (1 - minScale) * d / zoneWidth; solved for s.
-export function edgeScale(cursorToScreenEdge, cursorToWindowEdge, zoneWidth) {
-    const k = (1 - minScale) / zoneWidth;
-    return (minScale + k * cursorToScreenEdge) / (1 + k * cursorToWindowEdge);
+// Scale of a dragged window whose pointer is `pointerToEdge` from a screen
+// edge: full size until the pointer is within the edge zone (`zoneWidth`),
+// then falling linearly to minScale at the edge. (Glance goes by the
+// window's edge instead, so a large window shrinks wherever it is moved
+// near an edge.)
+export function pointerScale(pointerToEdge, zoneWidth) {
+    if (pointerToEdge >= zoneWidth)
+        return 1;
+    return minScale + (1 - minScale) * Math.max(0, pointerToEdge) / zoneWidth;
 }
 
 // How far a span [x, x + width) must move to lie within [start, start +

@@ -27,6 +27,8 @@ for _ in $(seq 60); do
             for (let i = 0; i < 20 && Main.overview.visible; i++) { Main.overview.hide(); await dev.sleep(500); }
             return Main.overview.visible' >/dev/null
         echo "nested shell ($mode) ready"
+        "$dev/eval.sh" 'const e = Main.extensionManager.lookup("glance-gnome@nikostourvas.github.io");
+            e.state === 1 ? "" : `extension not active: ${e.error}`' | grep -v "(true, '\"\"')" >&2 || true
         exit 0
     fi
     sleep 0.5
