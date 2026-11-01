@@ -11,6 +11,7 @@
 // - geometry.js: the rules, as pure functions.
 // - config.js: the settings (prefs.js edits them).
 // - compat.js: sharing the screen edges with Tiling Assistant.
+// - overview.js: the overview and workspace switches show tiles as tiles.
 
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -20,6 +21,7 @@ import {TilingAssistant} from './compat.js';
 import {Declutter} from './declutter.js';
 import {WindowDrag} from './drag.js';
 import {Popups} from './draw.js';
+import {ShellPatches} from './overview.js';
 import {ParkedWindows} from './parking.js';
 import {HoverPreviews} from './previews.js';
 
@@ -32,6 +34,9 @@ export default class GlanceExtension extends Extension {
         this._settings = this.getSettings();
         this._popups = new Popups();
         this._parking = new ParkedWindows(this._settings);
+        this._shellPatches = null;
+        this._syncShellPatches();
+        this._settings.connectObject('changed::patch-overview', () => this._syncShellPatches(), this);
         this._declutter = new Declutter(this._parking, this._settings);
         this._tilingAssistant = new TilingAssistant();
         this._drag = new WindowDrag(this._parking, this._declutter, this._settings, this._tilingAssistant);
@@ -43,11 +48,26 @@ export default class GlanceExtension extends Extension {
         this._drag.destroy();
         this._tilingAssistant.destroy();
         this._declutter.destroy();
+        this._settings.disconnectObject(this);
+        this._shellPatches?.destroy();
         this._parking.destroy();
         this._popups.destroy();
-        this._previews = this._drag = this._tilingAssistant = this._declutter = this._parking = this._popups = null;
+        this._previews = this._drag = this._tilingAssistant = this._declutter = this._shellPatches = null;
+        this._parking = this._popups = null;
         this._settings = null;
         this._restoreEdgeTiling();
+    }
+
+    // GNOME's overview and workspace switches patched to show tiles
+    // (overview.js) if the setting says so.
+    _syncShellPatches() {
+        const want = this._settings.get_boolean('patch-overview');
+        if (want && !this._shellPatches) {
+            this._shellPatches = new ShellPatches(this._parking);
+        } else if (!want && this._shellPatches) {
+            this._shellPatches.destroy();
+            this._shellPatches = null;
+        }
     }
 
     // Mutter's edge tiling would snap a window dragged to a side; here it

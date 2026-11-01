@@ -37,8 +37,14 @@ Glance](#differences-from-glance)).
   other window is parked.
 - Each workspace has its own columns and rows of tiles (tiles of windows
   on all workspaces join the current one's).
-- Leaving the overview, parked windows shrink back into their tiles; tiles
-  follow resolution, scale and monitor changes, and panels coming or going.
+- Switching workspaces, tiles slide along as tiles. Opening the overview, a
+  parked window grows from its edge (where its hover preview would be)
+  into the grid, and shrinks back into its tile when it closes. (This
+  changes GNOME's own animations, which can change between GNOME
+  releases: each change is only made if GNOME's code is as expected, falls
+  back to GNOME's own behaviour on any error, and can be turned off in the
+  settings.) Tiles follow resolution, scale and monitor changes, and panels
+  coming or going.
 
 ## Requirements
 
@@ -76,6 +82,8 @@ In the extension's preferences (Extensions app, Extension Manager, or
 - **Edge zone width:** how close to an edge the pointer must come, in
   percent of the screen width (1-20%), for a dragged window to shrink and
   park.
+- **Tiles in overview and workspace switches:** keep parked windows as
+  tiles in those animations (on by default; see above).
 
 Changes apply at once. Tiles at an edge that is switched off move to the
 nearest edge still on, or back to full size if none is.
@@ -140,6 +148,7 @@ Then, on the host:
     NESTED=headless dev/shot.sh       # screenshot
     NESTED=headless dev/scale.sh 2    # change its monitor's scale (a resolution change)
     dev/prefs.sh                      # open the extension's settings in the nested shell
+    dev/workspace.sh 2                # switch the nested shell to workspace 2
     HOST_EXTENSIONS=1 dev/run-nested.sh  # also run copies of the real session's enabled
                                          # extensions, with copies of their settings
     dev/pack.sh                       # build dist/<uuid>.shell-extension.zip

@@ -17,6 +17,11 @@
       <default>false</default>
       <summary>Park windows at the bottom screen edge</summary>
     </key>
+    <key name="patch-overview" type="b">
+      <default>true</default>
+      <summary>Show parked windows as tiles in the overview and workspace switches</summary>
+      <description>Changes GNOME's overview and workspace-switch animations so parked windows don't pop up at full size. Turn off if a GNOME update breaks them.</description>
+    </key>
     <key name="zone-percent" type="d">
       <range min="1" max="20"/>
       <default>2</default>

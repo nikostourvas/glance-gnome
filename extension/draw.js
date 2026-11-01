@@ -21,6 +21,11 @@ const POPUP_TYPES = new Set([
     Meta.WindowType.MENU,
 ]);
 
+// Whether a window is drawn somewhere other than its frame.
+export function isDrawn(window) {
+    return drawn.has(window);
+}
+
 export function frameRect(window) {
     return G.rect(window.get_frame_rect());
 }

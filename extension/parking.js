@@ -18,7 +18,7 @@ import {Ticker, clearDrawn, forgetDrawn, frameRect, setDrawn} from './draw.js';
 // A window going back to full size gives up waiting for its app after this
 // long (ms), keeping whatever size the app took (it may have a minimum).
 const RESTORE_WAIT = 1000;
-// Leaving the overview, tiles glide from full size into place this long (ms).
+// Leaving the overview, tiles glide into place this long (ms).
 const FROM_OVERVIEW_TIME = 250;
 
 export function screenOf(monitor) {
@@ -73,10 +73,14 @@ export class ParkedWindows {
         this._later = 0;
         this._timeouts = new Set();
         this._ticker = new Ticker(() => this._advance());
-        // The overview shows every window at full size where its frame is,
-        // and its copies fly back there as it closes; tiles then glide from
-        // there into place instead of appearing at once somewhere else.
-        Main.overview.connectObject('hidden', () => this._glideFromFrames(), this);
+        // Without the overview patched (see overview.js), the overview shows
+        // parked windows at full size where their frames are, and its copies
+        // fly back there as it closes: tiles then glide in from there.
+        this.overviewPatched = false;
+        Main.overview.connectObject('hidden', () => {
+            if (!this.overviewPatched)
+                this._glideFromFrames();
+        }, this);
         // A resolution, scale or monitor change, or a panel coming or going,
         // moves the edges: tiles follow (see _relayout).
         this._relayoutLater = 0;
@@ -521,15 +525,39 @@ export class ParkedWindows {
     }
 
     _glideFromFrames() {
-        for (const [window, parked] of this._parked) {
-            if (parked.restoring || !window.showing_on_its_workspace())
-                continue;
-            const frame = frameRect(window);
-            Object.assign(parked, {
-                animating: true, from: frame, current: frame, start: now(), duration: FROM_OVERVIEW_TIME,
-            });
-            this._apply(window);
+        for (const window of this._parked.keys()) {
+            if (this.isParked(window) && window.showing_on_its_workspace())
+                this.glideFrom(window, frameRect(window));
         }
+    }
+
+    // A tile's window at full size against its edge, centered on the tile
+    // (where a hover preview of it would be), in the work area.
+    fullAtEdge(window) {
+        const parked = this._parked.get(window);
+        const frame = frameRect(window);
+        const screen = screenOf(parked.monitor);
+        const area = workAreaOf(parked.monitor);
+        const spot = targetRect(parked);
+        let x, y;
+        if (G.isRow(parked.edge)) {
+            x = spot.x + spot.width / 2 - frame.width / 2;
+            y = parked.edge === G.Edge.TOP ? area.y : area.y + area.height - frame.height;
+        } else {
+            x = parked.edge === G.Edge.LEFT ? screen.x : screen.x + screen.width - frame.width;
+            y = spot.y + spot.height / 2 - frame.height / 2;
+        }
+        return G.keptIn({x, y, width: frame.width, height: frame.height}, area);
+    }
+
+    // Draws a tile gliding into place from `from` (where the overview's copy
+    // of it ended, see overview.js).
+    glideFrom(window, from) {
+        const parked = this._parked.get(window);
+        if (!parked)
+            return;
+        Object.assign(parked, {animating: true, from, current: from, start: now(), duration: FROM_OVERVIEW_TIME});
+        this._apply(window);
         this._ticker.start();
     }
 

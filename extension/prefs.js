@@ -43,6 +43,17 @@ export default class GlancePreferences extends ExtensionPreferences {
         zone.add(width);
         page.add(zone);
 
+        const animations = new Adw.PreferencesGroup({title: 'Animations'});
+        const patch = new Adw.SwitchRow({
+            title: 'Tiles in overview and workspace switches',
+            subtitle: "Parked windows stay tiles when switching workspaces and grow from their edge " +
+                "in the overview. This changes GNOME's own animations: turn it off if a GNOME " +
+                'update breaks them.',
+        });
+        settings.bind('patch-overview', patch, 'active', Gio.SettingsBindFlags.DEFAULT);
+        animations.add(patch);
+        page.add(animations);
+
         window.add(page);
     }
 }
