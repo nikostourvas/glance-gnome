@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.glance-gnome" path="/org/gnome/shell/extensions/glance-gnome/">
+    <key name="park-left" type="b">
+      <default>true</default>
+      <summary>Park windows at the left screen edge</summary>
+    </key>
+    <key name="park-right" type="b">
+      <default>true</default>
+      <summary>Park windows at the right screen edge</summary>
+    </key>
+    <key name="park-top" type="b">
+      <default>false</default>
+      <summary>Park windows at the top screen edge (below the top bar)</summary>
+    </key>
+    <key name="park-bottom" type="b">
+      <default>false</default>
+      <summary>Park windows at the bottom screen edge</summary>
+    </key>
+    <key name="zone-percent" type="d">
+      <range min="1" max="20"/>
+      <default>2</default>
+      <summary>Edge zone width, in percent of the screen width</summary>
+      <description>How close to an enabled screen edge a window must be dragged to shrink, and to park when dropped.</description>
+    </key>
+  </schema>
+</schemalist>
