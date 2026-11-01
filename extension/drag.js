@@ -52,6 +52,9 @@ export class WindowDrag {
         this._drag = {
             window, started: false,
             press: {x, y, time: GLib.get_monotonic_time() / 1000, superKey: superHeld(mods)},
+            // Where it was before the drag, for putting it back there after
+            // parking (unknown if it was maximized).
+            origin: window.get_maximize_flags() === 0 ? frameRect(window) : null,
         };
         this._ticker.start();
     }
@@ -74,6 +77,7 @@ export class WindowDrag {
             shake: {dir: 0, far: px, turns: []},
         });
         if (parked) {
+            drag.origin = parked.origin ?? null;
             const drawn = this._parking.drawnRect(window);
             drag.gx = G.clamp((px - drawn.x) / drawn.width, 0, 1);
             drag.gy = G.clamp((py - drawn.y) / drawn.height, 0, 1);
@@ -136,11 +140,14 @@ export class WindowDrag {
         const height = frame.height * scale;
         let x = drag.attached ? px + (frame.x - px) * scale : px - drag.gx * width;
         let y = drag.attached ? py + (frame.y - py) * scale : py - drag.gy * height;
-        // When even minScale doesn't fit, it slides back on screen (the
-        // cursor then leaves the grabbed spot).
-        x += G.shiftOntoScreen(x, width, screen);
-        if (total < 1)
-            y += G.shiftInto(y, height, screen.y, screen.height);
+        // As it shrinks it also slides onto the screen, in step with the
+        // shrinking: not at all at full size (a window may hang off an edge
+        // when the pointer gets near it), fully at parking size. Then the
+        // pointer may leave the grabbed spot.
+        const floor = G.parkingScale(original);
+        const onto = floor < 1 ? G.clamp((1 - total) / (1 - floor), 0, 1) : 1;
+        x += G.shiftOntoScreen(x, width, screen) * onto;
+        y += G.shiftInto(y, height, screen.y, screen.height) * onto;
         drag.drawn = {x, y, width, height};
         if (drag.attached && total >= 1)
             clearDrawn(window);
@@ -195,7 +202,7 @@ export class WindowDrag {
 
         const {original} = drag;
         if (drag.total < G.parkBelow) {
-            this._parking.drop(window, drag.drawn, original, drag.monitor, drag.edge);
+            this._parking.drop(window, drag.drawn, original, drag.monitor, drag.edge, drag.origin);
         } else if (drag.snapping) {
             // Tiling Assistant places it.
             clearDrawn(window);

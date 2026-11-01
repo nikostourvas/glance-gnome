@@ -33,6 +33,16 @@ function now() {
     return GLib.get_monotonic_time() / 1000;
 }
 
+function activeWorkspace() {
+    return global.workspace_manager.get_active_workspace();
+}
+
+// The workspace whose lines of tiles a window's tile is in: its own, or the
+// active one for a window on all workspaces.
+function workspaceOf(window) {
+    return window.get_workspace() ?? activeWorkspace();
+}
+
 // Where a parked window is headed: its preview, else where it was moved
 // aside to (for a neighbour's preview), else its home spot.
 function targetRect(parked) {
@@ -51,8 +61,9 @@ export class ParkedWindows {
         // Per window: shown (where it is drawn, its frame's width fitted
         // into it: its home spot), preview (drawn there instead while
         // hovered, see previews.js), aside (drawn there instead while a
-        // neighbour is previewed), original (full size), monitor, edge (a
-        // G.Edge), zoom (of
+        // neighbour is previewed), original (full size), origin (where it
+        // was before it was parked, or null), monitor, edge (a G.Edge), zoom
+        // (of
         // the app's size, once it has it; resizeFrom: its size before),
         // restoring
         // (going back to full size, until restoreBy), and the glide
@@ -71,6 +82,10 @@ export class ParkedWindows {
         this._relayoutLater = 0;
         Main.layoutManager.connectObject('monitors-changed', () => this._queueRelayout(), this);
         global.display.connectObject('workareas-changed', () => this._queueRelayout(), this);
+        // Each workspace has its own lines of tiles; a window on all
+        // workspaces joins the active one's.
+        this._arrangeLater = 0;
+        global.workspace_manager.connectObject('active-workspace-changed', () => this._queueArrangeAll(), this);
         // An edge switched off in the settings: its tiles move (see
         // _edgesChanged).
         for (const key of EDGE_SETTINGS)
@@ -82,11 +97,14 @@ export class ParkedWindows {
         Main.overview.disconnectObject(this);
         Main.layoutManager.disconnectObject(this);
         global.display.disconnectObject(this);
+        global.workspace_manager.disconnectObject(this);
         this._ticker.stop();
         if (this._later)
             global.compositor.get_laters().remove(this._later);
         if (this._relayoutLater)
             global.compositor.get_laters().remove(this._relayoutLater);
+        if (this._arrangeLater)
+            global.compositor.get_laters().remove(this._arrangeLater);
         this._timeouts.forEach(id => GLib.source_remove(id));
         for (const window of [...this._parked.keys()])
             this._restoreNow(window);
@@ -122,33 +140,38 @@ export class ParkedWindows {
 
     // A window dropped (by a drag) where it was drawn at `drawn`, near
     // `edge`: a tile at that edge, gliding there.
-    drop(window, drawn, original, monitor, edge) {
-        this.toParking(window, edge, monitor, {from: drawn, original, center: G.lineCenter(edge, drawn)});
+    drop(window, drawn, original, monitor, edge, origin) {
+        this.toParking(window, edge, monitor, {from: drawn, original, center: G.lineCenter(edge, drawn), origin});
     }
 
     // A window (parked or not) to the tiles at `edge`, keeping its place
-    // along it (or `center`).
-    toParking(window, edge, monitor, {from, original, center} = {}) {
+    // along it (or `center`). Its `origin` (see park) is where it is now if
+    // not parked yet.
+    toParking(window, edge, monitor, {from, original, center, origin} = {}) {
         const parked = this._parked.get(window);
         const isParked = parked && !parked.restoring;
         const frame = frameRect(window);
         from ??= this.drawnRect(window);
         original ??= isParked ? parked.original : {width: frame.width, height: frame.height};
         center ??= G.lineCenter(edge, isParked ? parked.shown : frame);
+        if (origin === undefined)
+            origin = isParked ? parked.origin : frame;
         const place = G.parkingTileRect(edge, original, center, screenOf(monitor), workAreaOf(monitor));
         this.release(window);
-        this.park(window, place, original, monitor, {from, edge});
+        this.park(window, place, original, monitor, {from, edge, origin});
     }
 
     // Parks a window drawn at `place` at `edge` (gliding there from `from`),
     // its app at its full size `original`, and closes up its line of tiles.
-    park(window, place, original, monitor, {from = place, edge}) {
+    // `origin` is where it was before it was parked (null: unknown), for
+    // unpark.
+    park(window, place, original, monitor, {from = place, edge, origin = null}) {
         const screen = screenOf(monitor);
         const layout = original;
         const frame = frameRect(window);
         const resize = !G.near(layout.width, frame.width) || !G.near(layout.height, frame.height);
         this._set(window, {
-            shown: place, original, monitor, edge, restoring: false,
+            shown: place, original, origin, monitor, edge, restoring: false,
             zoom: place.width / layout.width,
             resizeFrom: resize ? {width: frame.width, height: frame.height} : null,
         });
@@ -167,7 +190,7 @@ export class ParkedWindows {
             window.move_frame(true, x, y);
         }
         this._glide(window, from);
-        this.arrangeLine(edge, monitor, window);
+        this.arrangeLine(edge, monitor, window, workspaceOf(window));
     }
 
     // Back to full size `original` at `target`, drawn there (scaled) until
@@ -208,15 +231,17 @@ export class ParkedWindows {
         this._glide(window, from);
     }
 
-    // The tiles at `edge` of `monitor`, in order along it by home spot.
-    line(edge, monitor) {
+    // The tiles at `edge` of `monitor` on `workspace` (the active one by
+    // default), in order along it by home spot.
+    line(edge, monitor, workspace = activeWorkspace()) {
         const {pos} = G.lineAxis(edge);
-        return [...this._parked].filter(([, p]) => !p.restoring && p.monitor === monitor && p.edge === edge)
+        return [...this._parked].filter(([w, p]) => !p.restoring && p.monitor === monitor && p.edge === edge &&
+                w.located_on_workspace(workspace))
             .sort(([, a], [, b]) => a.shown[pos] - b.shown[pos])
             .map(([w]) => w);
     }
 
-    // The tiles in the same line as `window`.
+    // The tiles in the same line as `window`, on the active workspace.
     lineOf(window) {
         const parked = this._parked.get(window);
         return this.line(parked.edge, parked.monitor);
@@ -239,21 +264,23 @@ export class ParkedWindows {
         if (!parked)
             return;
         const wasParked = !parked.restoring;
+        const workspace = workspaceOf(window);
         this._forget(window);
         if (wasParked)
-            this.arrangeLine(parked.edge, parked.monitor, null);
+            this.arrangeLine(parked.edge, parked.monitor, null, workspace);
     }
 
-    // Each edge holds its tiles as one line (a column at a side, a row at
-    // the bottom), centered, ordered by where they are (an arriving window
-    // that lands on another goes after it).
-    arrangeLine(edge, monitor, arriving) {
+    // Each edge holds its tiles on a workspace as one line (a column at a
+    // side, a row at the top or bottom), centered, ordered by where they are
+    // (an arriving window that lands on another goes after it).
+    arrangeLine(edge, monitor, arriving, workspace = activeWorkspace()) {
         const {pos, size} = G.lineAxis(edge);
         const bounds = G.lineBounds(edge, screenOf(monitor), workAreaOf(monitor));
         const items = [];
         let total = 0;
         for (const [window, parked] of this._parked) {
-            if (parked.restoring || parked.monitor !== monitor || parked.edge !== edge)
+            if (parked.restoring || parked.monitor !== monitor || parked.edge !== edge ||
+                !window.located_on_workspace(workspace))
                 continue;
             let key = parked.shown[pos] + parked.shown[size] / 2;
             if (window === arriving)
@@ -274,6 +301,32 @@ export class ParkedWindows {
         }
     }
 
+    // Every line of tiles re-formed (the active workspace's last, so tiles
+    // of windows on all workspaces end up in its lines).
+    arrangeAll() {
+        const manager = global.workspace_manager;
+        const active = manager.get_active_workspace();
+        const workspaces = [...Array(manager.get_n_workspaces()).keys()]
+            .map(i => manager.get_workspace_by_index(i))
+            .filter(w => w !== active);
+        for (const workspace of [...workspaces, active]) {
+            for (let monitor = 0; monitor < global.display.get_n_monitors(); monitor++) {
+                for (const edge of Object.values(G.Edge))
+                    this.arrangeLine(edge, monitor, null, workspace);
+            }
+        }
+    }
+
+    _queueArrangeAll() {
+        if (this._arrangeLater)
+            return;
+        this._arrangeLater = global.compositor.get_laters().add(Meta.LaterType.BEFORE_REDRAW, () => {
+            this._arrangeLater = 0;
+            this.arrangeAll();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
     _set(window, parked) {
         if (!this._parked.has(window)) {
             const queue = () => this._queue(window);
@@ -281,6 +334,7 @@ export class ParkedWindows {
                 'position-changed', queue,
                 'size-changed', queue,
                 'shown', queue,
+                'workspace-changed', () => this._queueArrangeAll(),
                 'unmanaged', () => this._closed(window), this);
             // The shell's own animations (minimize, maximize) reset the
             // actor's scale when they finish.
@@ -370,7 +424,7 @@ export class ParkedWindows {
             y = G.clamp(spot.y + spot.height / 2 - height / 2, area.y, Math.max(area.y, area.y + area.height - height));
         }
         parked.shown = {x, y, width, height};
-        this.arrangeLine(parked.edge, parked.monitor, null);
+        this.arrangeLine(parked.edge, parked.monitor, null, workspaceOf(window));
     }
 
     _queueRelayout() {
@@ -395,7 +449,7 @@ export class ParkedWindows {
             let monitor = window.get_monitor();
             if (monitor < 0 || monitor >= nMonitors)
                 monitor = global.display.get_primary_monitor();
-            const key = `${monitor}:${parked.edge}`;
+            const key = `${monitor}:${parked.edge}:${window.get_workspace()?.index() ?? 'all'}`;
             if (!lines.has(key))
                 lines.set(key, []);
             lines.get(key).push({window, parked, monitor, order: G.lineCenter(parked.edge, parked.shown)});
@@ -409,9 +463,31 @@ export class ParkedWindows {
             items.forEach(({window, parked}, i) => {
                 const center = bounds.start + bounds.length * (i + 0.5) / items.length;
                 const place = G.parkingTileRect(edge, parked.original, center, screen, area);
-                this.park(window, place, parked.original, monitor, {from: displayRect(parked), edge});
+                this.park(window, place, parked.original, monitor,
+                    {from: displayRect(parked), edge, origin: parked.origin});
             });
         }
+        this.arrangeAll();
+    }
+
+    // A tile back to its size and to where it was before it was parked
+    // (centered if that isn't known), gliding there (Super+double-click, see
+    // Declutter).
+    unpark(window) {
+        const parked = this._parked.get(window);
+        if (!parked || parked.restoring)
+            return;
+        const from = displayRect(parked);
+        const {original, origin, monitor} = parked;
+        const area = workAreaOf(monitor);
+        const target = G.keptIn(origin
+            ? {x: origin.x, y: origin.y, ...original}
+            : {x: area.x + (area.width - original.width) / 2, y: area.y + (area.height - original.height) / 2,
+                ...original}, area);
+        console.debug(`glance: ${window.get_title()}: unpark`);
+        this.release(window);
+        this.restore(window, target, original, monitor, from);
+        window.activate(global.get_current_time());
     }
 
     // Tiles at an edge switched off go to the nearest edge still on, or, if

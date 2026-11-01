@@ -24,15 +24,19 @@ Glance](#differences-from-glance)).
   the window's full size (at most 60% of the screen wide). The other tiles
   in its line move out of the way, so the whole preview can be used. Move
   onto another tile to switch to it; leave and it shrinks back.
-- **Unparking.** Drag a tile back into the middle of the screen and the
-  window gets its size back. Tiles are easiest to move with Super+drag
-  (from anywhere in the tile).
-- **Declutter.** Super+double-click a window: it fills the half of the
+- **Unparking.** Super+double-click a tile and the window goes back to its
+  size and to where it was before it was parked. Or drag a tile back into
+  the middle of the screen: the window gets its size back where it is
+  dropped. Tiles are easiest to drag with Super+drag (from anywhere in the
+  tile).
+- **Declutter.** Super+double-click a (not parked) window: it fills the half of the
   screen nearer to it, full height, and every other window is parked.
   Super+double-click the empty desktop to park everything. The same
   Super+double-click again undoes it.
 - **Shake.** Shake a window from side to side while dragging it, and every
   other window is parked.
+- Each workspace has its own columns and rows of tiles (tiles of windows
+  on all workspaces join the current one's).
 - Leaving the overview, parked windows shrink back into their tiles; tiles
   follow resolution, scale and monitor changes, and panels coming or going.
 

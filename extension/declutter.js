@@ -1,4 +1,5 @@
-// Declutter, Super+double-click: on a window, it fills the half of main
+// Declutter, Super+double-click: on a tile, it is unparked (see
+// ParkedWindows.unpark); on another window, it fills the half of main
 // nearer to it, full height, and every other window in main is parked (at
 // the enabled side edges, balanced, else at the enabled top and bottom;
 // Glance puts them in its stashes); on the
@@ -112,9 +113,14 @@ export class Declutter {
         }
     }
 
-    // Undoes the last declutter if it was for the same target and the
-    // target is still where it put it; else declutters.
+    // On a tile: unparks it (back to its size and place). Else undoes the
+    // last declutter if it was for the same target and the target is still
+    // where it put it, or declutters.
     _toggle(target, x, y) {
+        if (target && this._parking.isParked(target)) {
+            this._parking.unpark(target);
+            return;
+        }
         const last = this._last;
         const again = last && (target
             ? last.target === target && !this._parking.get(target) &&
@@ -215,7 +221,7 @@ export class Declutter {
                     continue; // untouched
                 this._parking.release(window);
                 this._parking.park(window, parked.shown, parked.original, parked.monitor,
-                    {from, edge: parked.edge});
+                    {from, edge: parked.edge, origin: parked.origin});
             } else if (maximized) {
                 this._parking.release(window);
                 clearDrawn(window);
