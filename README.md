@@ -31,8 +31,11 @@ Glance](#differences-from-glance)).
   tile).
 - **Centering.** Super+double-click a (not parked) window: it moves to the
   middle of the screen at its size (smaller only if it doesn't fit), and the
-  windows in its way are pushed aside to its left and right, at their size,
-  leaving room for tiles at the edges.
+  windows in its way fan out to its left and right, so that each still
+  shows if it can: the higher in the stack, the nearer the middle. They
+  always leave room for tiles at the edges, and keep their size unless they
+  don't fit in what is left. A window out of the way stays where it is,
+  unless it is hidden.
   Handy to bring what you are working on straight ahead.
   Super+double-click the empty desktop to park every window. The same
   Super+double-click again undoes it.
@@ -151,6 +154,7 @@ Then, on the host:
     NESTED=headless dev/run-nested.sh # a second one without a window, for scripted tests
     NESTED=headless dev/eval.sh "$(cat dev/tests/park-right.js)"
     NESTED=headless dev/shot.sh       # screenshot
+    gjs -m dev/tests/place-around.js  # where centering puts other windows (no shell needed)
     NESTED=headless dev/scale.sh 2    # change its monitor's scale (a resolution change)
     dev/prefs.sh                      # open the extension's settings in the nested shell
     dev/workspace.sh 2                # switch the nested shell to workspace 2

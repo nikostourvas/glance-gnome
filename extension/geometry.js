@@ -30,6 +30,12 @@ export const shakeTurns = 3;
 export const shakeStroke = 30;
 export const shakeTime = 500;
 
+// Windows pushed aside for a centered one (placeAround): with less than
+// minVisible showing, a window counts as hidden, and with wellVisible as
+// well shown.
+export const minVisible = 32;
+export const wellVisible = 120;
+
 // The screen edges windows park at: a column at each side, a row at the
 // top and at the bottom.
 export const Edge = {LEFT: 0, RIGHT: 1, TOP: 2, BOTTOM: 3};
@@ -135,6 +141,133 @@ export function clearOfTiles(screen, area, edges) {
     if (edges.includes(Edge.BOTTOM))
         bottom -= thickness;
     return {x: left, y: top, width: right - left, height: bottom - top};
+}
+
+function overlaps(a, b) {
+    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+// What is left of `r` with `cover` taken out, as rectangles.
+function subtract(r, cover) {
+    if (!overlaps(r, cover))
+        return [r];
+    const [right, bottom] = [r.x + r.width, r.y + r.height];
+    const [coverRight, coverBottom] = [cover.x + cover.width, cover.y + cover.height];
+    const y = Math.max(r.y, cover.y);
+    const height = Math.min(bottom, coverBottom) - y;
+    const pieces = [];
+    if (r.y < cover.y)
+        pieces.push({...r, height: cover.y - r.y});
+    if (coverBottom < bottom)
+        pieces.push({...r, y: coverBottom, height: bottom - coverBottom});
+    if (r.x < cover.x)
+        pieces.push({x: r.x, y, width: cover.x - r.x, height});
+    if (coverRight < right)
+        pieces.push({x: coverRight, y, width: right - coverRight, height});
+    return pieces;
+}
+
+// How much of `r` shows inside `area` under `covers`: the shorter side of
+// its largest visible piece.
+export function visibleSize(r, covers, area) {
+    const x = Math.max(r.x, area.x);
+    const y = Math.max(r.y, area.y);
+    const width = Math.min(r.x + r.width, area.x + area.width) - x;
+    const height = Math.min(r.y + r.height, area.y + area.height) - y;
+    if (width <= 0 || height <= 0)
+        return 0;
+    let pieces = [{x, y, width, height}];
+    for (const cover of covers)
+        pieces = pieces.flatMap(piece => subtract(piece, cover));
+    return Math.max(0, ...pieces.map(piece => Math.min(piece.width, piece.height)));
+}
+
+// How much of `length` each of `widths` gets: equal shares, but none more
+// than its own width.
+function strips(widths, length) {
+    const shares = new Array(widths.length);
+    let rest = length;
+    [...widths.keys()].sort((a, b) => widths[a] - widths[b]).forEach((i, done) => {
+        shares[i] = Math.min(widths[i], rest / (widths.length - done));
+        rest -= shares[i];
+    });
+    return shares;
+}
+
+// `windows` (bottom to top of the stack) with those at the indices `moving`
+// aside of `center`, inside `room` (smaller if they don't fit): the first
+// `split` of them from the left to its left, the rest to its right. On each
+// side, the higher in the stack the nearer to `center`, so that each shows a
+// strip beyond the ones above it, on the side away from `center`. One so wide
+// it would pass the room's far end stops there, and those below it go beyond
+// it.
+function layoutAside(center, room, windows, moving, split) {
+    const placed = [...windows];
+    const fitted = i => ({
+        ...windows[i],
+        width: Math.min(windows[i].width, room.width),
+        height: Math.min(windows[i].height, room.height),
+    });
+    const place = (indices, atLeft) => {
+        const [start, end] = atLeft
+            ? [room.x, center.x]
+            : [center.x + center.width, room.x + room.width];
+        const topFirst = [...indices].sort((a, b) => b - a);
+        let reach = atLeft ? end : start;
+        topFirst.forEach((i, n) => {
+            const r = fitted(i);
+            const below = topFirst.slice(n).map(j => fitted(j).width);
+            const share = strips(below, Math.max(0, atLeft ? reach - start : end - reach))[0];
+            const x = clamp(atLeft ? reach - share : reach + share - r.width,
+                room.x, room.x + room.width - r.width);
+            reach = atLeft ? x : x + r.width;
+            placed[i] = {
+                ...r,
+                x: Math.round(x),
+                y: r.y + shiftInto(r.y, r.height, room.y, room.height),
+            };
+        });
+    };
+    const fromLeft = [...moving].sort((a, b) =>
+        windows[a].x + windows[a].width / 2 - (windows[b].x + windows[b].width / 2));
+    place(fromLeft.slice(0, split), true);
+    place(fromLeft.slice(split), false);
+    return placed;
+}
+
+// Where to put `windows` (rectangles, bottom to top of the stack) around
+// `center`, which is on top of them: those in its way go aside into `room`
+// (see layoutAside), to whichever sides leave them all showing, well if
+// possible, moving them the least. One out of its way stays unless it is
+// hidden or hides another that can't show otherwise. Staying in `room`, not
+// all can always show: a window that fills it leaves no room beside it.
+export function placeAround(center, room, area, windows) {
+    const all = [...windows.keys()];
+    const moving = new Set(all.filter(i => overlaps(windows[i], center)));
+    for (;;) {
+        let best = null;
+        for (let split = 0; split <= moving.size; split++) {
+            const placed = layoutAside(center, room, windows, moving, split);
+            const shown = placed.map((r, i) => visibleSize(r, [center, ...placed.slice(i + 1)], area));
+            const tried = {
+                placed, shown,
+                hidden: shown.filter(size => size < minVisible).length,
+                worst: Math.min(wellVisible, ...shown),
+                moved: placed.reduce((sum, r, i) => sum + Math.abs(r.x - windows[i].x) + Math.abs(r.y - windows[i].y), 0),
+            };
+            if (!best || (tried.hidden - best.hidden || best.worst - tried.worst || tried.moved - best.moved) < 0)
+                best = tried;
+        }
+        const hidden = all.filter(i => best.shown[i] < minVisible);
+        let more = hidden.filter(i => !moving.has(i));
+        if (!more.length) {
+            more = hidden.flatMap(i => all.filter(j => j > i && !moving.has(j) &&
+                overlaps(best.placed[i], windows[j])));
+        }
+        if (!more.length)
+            return best.placed;
+        more.forEach(i => moving.add(i));
+    }
 }
 
 // `box` moved as little as needed to lie within `area` (a bigger box keeps

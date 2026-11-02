@@ -1,8 +1,9 @@
 // Declutter, Super+double-click: on a tile, it is unparked (see
 // ParkedWindows.unpark); on another window, it moves to the middle of the
 // screen (at its size, smaller only if it doesn't fit) and the windows in
-// its way are pushed aside, left or right of it, at their size, clear of
-// where tiles go (Glance
+// its way are pushed aside, left or right of it, at their size, always clear
+// of where tiles go (smaller only if they don't fit there), and so that all
+// of them still show if they can (Glance
 // fills the nearer half of the screen and stashes the others); on the empty
 // desktop, every window is parked (at the enabled side edges, balanced, else
 // at the enabled top and bottom). The same Super+double-click again undoes
@@ -40,10 +41,6 @@ function manageable(window) {
         !window.is_fullscreen() && !window.is_skip_taskbar() && window.allows_move() &&
         (window.allows_resize() || window.get_maximize_flags() !== 0) && !!window.get_compositor_private() &&
         window.located_on_workspace(global.workspace_manager.get_active_workspace());
-}
-
-function overlap(a, b) {
-    return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 // Whether `r` is (about) at `place`.
@@ -161,11 +158,9 @@ export class Declutter {
     }
 
     // `target` to the middle of the work area, at its size (smaller only if
-    // it doesn't fit), and the windows overlapping it there pushed aside,
-    // left or right of it (by which side of it their middle is on), at
-    // their size, gliding there, but not over the enabled edges' tiles
-    // (see G.clearOfTiles). One too wide to fit beside it stays against
-    // that room's edge, partly behind it.
+    // it doesn't fit), and the windows in its way pushed aside, gliding
+    // there, never over the enabled edges' tiles (G.clearOfTiles), and so
+    // that all of them still show if they can (G.placeAround).
     async _center(target, monitor, layout) {
         const others = this._windows(monitor).filter(w => w !== target && !this._parking.isParked(w));
         await this._unmaximize([target, ...others]);
@@ -185,15 +180,15 @@ export class Declutter {
         this._parking.restore(target, center, {width, height}, monitor, this._parking.drawnRect(target));
 
         const room = G.clearOfTiles(screenOf(monitor), area, enabledEdges(this._settings));
-
-        for (const window of others) {
-            const rect = frameRect(window);
-            if (!overlap(rect, center))
-                continue;
-            const left = rect.x + rect.width / 2 < center.x + center.width / 2;
-            const aside = G.keptIn({...rect, x: left ? center.x - rect.width : center.x + center.width}, room);
-            this._parking.restore(window, aside, {width: rect.width, height: rect.height}, monitor, rect);
-        }
+        const stacked = global.display.sort_windows_by_stacking(others);
+        const rects = stacked.map(frameRect);
+        G.placeAround(center, room, area, rects).forEach((place, i) => {
+            const rect = rects[i];
+            if (place.x !== rect.x || place.y !== rect.y || place.width !== rect.width || place.height !== rect.height) {
+                this._parking.restore(stacked[i], place, {width: place.width, height: place.height},
+                    monitor, rect);
+            }
+        });
     }
 
     // Unmaximizes those of `windows` that are, noting where they are then
@@ -290,8 +285,8 @@ export class Declutter {
                         unmaximized.width, unmaximized.height);
                 }
                 window.maximize();
-            } else if (current || !G.near(frameRect(window).x, frame.x) ||
-                       !G.near(frameRect(window).y, frame.y) || !G.near(frameRect(window).width, frame.width)) {
+            } else if (current || !G.near(frameRect(window).x, frame.x) || !G.near(frameRect(window).y, frame.y) ||
+                       !G.near(frameRect(window).width, frame.width) || !G.near(frameRect(window).height, frame.height)) {
                 this._parking.restore(window, frame, {width: frame.width, height: frame.height},
                     last.monitor, from);
             }
