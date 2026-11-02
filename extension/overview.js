@@ -20,6 +20,7 @@ import {WorkspaceLayout} from 'resource:///org/gnome/shell/ui/workspace.js';
 import {BaseWorkspaceGroup} from 'resource:///org/gnome/shell/ui/workspaceAnimation.js';
 
 import {Ticker, isDrawn} from './draw.js';
+import {addTileCopy} from './icons.js';
 
 let warned = false;
 
@@ -57,6 +58,7 @@ export class ShellPatches {
                     clone.set_pivot_point(pivot.x, pivot.y);
                     clone.set_scale(windowActor.scale_x, windowActor.scale_y);
                     clone.set_translation(tx, ty, 0);
+                    addTileCopy(clone);
                 }
             } catch (e) {
                 warnOnce('drawing a tile in a workspace switch', e);

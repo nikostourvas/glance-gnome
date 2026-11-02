@@ -19,7 +19,8 @@ Glance](#differences-from-glance)).
   a zone and it becomes a 180 px
   tile in a column at a side, or a row at the top or bottom. Tiles stay
   live and usable: clicks, typing, scrolling and menus work. The app keeps
-  its size; it is only drawn small.
+  its size; it is only drawn small. Each tile shows its app's icon, as the
+  overview does.
 - **Hover previews.** Rest the pointer on a tile and it grows in place to
   the window's full size (at most 60% of the screen wide). The other tiles
   in its line move out of the way, so the whole preview can be used. Move

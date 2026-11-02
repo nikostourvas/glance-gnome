@@ -6,6 +6,7 @@
 // - draw.js: drawing a window somewhere other than its frame; menus follow.
 // - drag.js: shrinking while dragging.
 // - parking.js: parked windows, their columns and rows.
+// - icons.js: each tile shows its app's icon.
 // - previews.js: hovering a tile grows it.
 // - declutter.js: Super+double-click centers a window or parks everything;
 //   shaking parks the other windows.

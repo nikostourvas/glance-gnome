@@ -14,6 +14,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as G from './geometry.js';
 import {EDGE_SETTINGS, enabledEdges} from './config.js';
 import {Ticker, clearDrawn, forgetDrawn, frameRect, setDrawn} from './draw.js';
+import {TileIcons} from './icons.js';
 
 // A window going back to full size gives up waiting for its app after this
 // long (ms), keeping whatever size the app took (it may have a minimum).
@@ -69,6 +70,7 @@ export class ParkedWindows {
         // (going back to full size, until restoreBy), and the glide
         // (animating, from, current, start).
         this._parked = new Map();
+        this._icons = new TileIcons();
         this._dirty = new Set();
         this._later = 0;
         this._timeouts = new Set();
@@ -342,6 +344,7 @@ export class ParkedWindows {
         window.get_compositor_private()?.disconnectObject(this);
         this._parked.delete(window);
         this._dirty.delete(window);
+        this._icons.remove(window);
     }
 
     _closed(window) {
@@ -387,7 +390,9 @@ export class ParkedWindows {
         }
         this._followApp(window, parked, frame);
         const display = displayRect(parked);
-        setDrawn(window, display.x, display.y, display.width / frame.width);
+        const scale = display.width / frame.width;
+        setDrawn(window, display.x, display.y, scale);
+        this._icons.update(window, display.x, display.y, scale, !parked.restoring && !parked.preview);
     }
 
     // Once the app has its size (or the nearest it allows: it may have a
