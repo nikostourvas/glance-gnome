@@ -1,7 +1,8 @@
-# Shared by the dev scripts. Two nested sessions can run side by side:
+# Shared by the dev scripts. Nested sessions can run side by side:
 #   NESTED=window   (default) in a window on the desktop, for trying by hand;
 #   NESTED=headless no window, for scripted tests (dev/eval.sh, dev/shot.sh)
 #                   that a real mouse can't disturb.
+#   NESTED=demo     like headless, for the recordings of dev/demo.sh.
 dev=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 mode=${NESTED:-window}
 state=$dev/state/$mode

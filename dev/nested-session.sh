@@ -34,6 +34,13 @@ if [ -n "${HOST_EXTENSIONS:-}" ]; then
     glib-compile-schemas "$schemas" || true
 fi
 
+# The demo recordings (dev/demo.sh) get a home folder of their own, outside
+# the real one, so that its name and files don't show.
+if [ "$mode" = demo ]; then
+    export HOME=/tmp/glance-demo
+    rm -rf "$HOME"
+    mkdir -p "$HOME/Documents"
+fi
 export XDG_CONFIG_HOME=$state/config XDG_DATA_HOME=$state/data
 export XDG_CACHE_HOME=$state/cache XDG_STATE_HOME=$state/local-state
 unset DBUS_SESSION_BUS_ADDRESS
@@ -51,7 +58,7 @@ export G_MESSAGES_DEBUG=Gjs-Console
 # Distrobox has the host's system bus here; the shell needs it to start.
 export DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/host/run/dbus/system_bus_socket
 
-if [ "$mode" = headless ]; then
+if [ "$mode" != window ]; then
     args=(--headless --virtual-monitor "${SIZE:-2560x1080}")
 else
     args=(--devkit --wayland)
