@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs an app from the gnome-dev distrobox in the nested shell, e.g.
+# Runs an app from the dev distrobox (see common.sh) in the nested shell, e.g.
 #   dev/open.sh gnome-text-editor
 #   dev/open.sh firefox --no-remote --profile dev/state/firefox
 # With X11=1, as an X11 app (the nested shell must have been started with
@@ -14,6 +14,6 @@ if [ -n "${X11:-}" ]; then
 else
     backend=(GDK_BACKEND=wayland WAYLAND_DISPLAY="$display" MOZ_ENABLE_WAYLAND=1)
 fi
-setsid distrobox enter gnome-dev -- env DBUS_SESSION_BUS_ADDRESS="$(cat "$state/bus")" \
+setsid distrobox enter "$box" -- env DBUS_SESSION_BUS_ADDRESS="$(cat "$state/bus")" \
     "${backend[@]}" "$@" \
     >>"$state/apps.log" 2>&1 </dev/null &

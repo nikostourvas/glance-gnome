@@ -2,5 +2,5 @@
   "uuid": "devhelper@glance-gnome",
   "name": "Glance dev helper",
   "description": "Development only, for the nested session: unsafe mode (for dev/eval.sh) and a virtual pointer and keyboard for scripted drags.",
-  "shell-version": ["50"]
+  "shell-version": ["50", "51"]
 }

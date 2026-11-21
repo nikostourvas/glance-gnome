@@ -1,7 +1,7 @@
 #!/bin/bash
-# Inside the gnome-dev distrobox (dev/run-nested.sh starts it): a nested GNOME
-# Shell with the extension and the dev helper enabled, isolated from the real
-# session (its own settings, extensions and session bus). With
+# Inside the dev distrobox (see common.sh; dev/run-nested.sh starts it): a
+# nested GNOME Shell with the extension and the dev helper enabled, isolated
+# from the real session (its own settings, extensions and session bus). With
 # HOST_EXTENSIONS=1, copies of the extensions enabled in the real session run
 # too, with copies of their settings (dev/run-nested.sh lists and dumps them).
 # With X11=1, X11 apps can run in it too (Xwayland, started on demand; see
@@ -42,8 +42,10 @@ unset DBUS_SESSION_BUS_ADDRESS
 export XDG_DATA_DIRS=/usr/local/share:/usr/share
 # Firefox gets a profile of its own (its default is the real ~/.mozilla).
 mkdir -p "$state/firefox" "$state/data/applications"
-sed "s|^Exec=firefox|Exec=firefox --no-remote --profile $state/firefox|" \
-    /usr/share/applications/org.mozilla.firefox.desktop >"$state/data/applications/org.mozilla.firefox.desktop"
+if [ -f /usr/share/applications/org.mozilla.firefox.desktop ]; then
+    sed "s|^Exec=firefox|Exec=firefox --no-remote --profile $state/firefox|" \
+        /usr/share/applications/org.mozilla.firefox.desktop >"$state/data/applications/org.mozilla.firefox.desktop"
+fi
 # The extension's log lines (glance: ...) are debug messages.
 export G_MESSAGES_DEBUG=Gjs-Console
 # Distrobox has the host's system bus here; the shell needs it to start.

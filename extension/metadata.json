@@ -3,7 +3,8 @@
   "name": "Glance for GNOME",
   "description": "Drag a window to a screen edge and it parks there as a small tile, still live; hover a tile to see and use the window at full size. Super+double-click a window to keep it and park the rest. Based on Scott Jenson's Glance for KDE Plasma.",
   "shell-version": [
-    "50"
+    "50",
+    "51"
   ],
   "session-modes": [
     "user",

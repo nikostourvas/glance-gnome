@@ -157,11 +157,14 @@ drawn window, at full size.
 ## Development
 
 Code changes are tried in a nested GNOME Shell, not the real session, so
-nothing needs a logout. It runs from a Fedora 44 distrobox:
+nothing needs a logout. It runs from a Fedora 45 (GNOME 51) distrobox:
 
-    distrobox create -n gnome-dev -i registry.fedoraproject.org/fedora-toolbox:44
-    distrobox enter gnome-dev -- sudo dnf install gnome-shell mutter-devkit dbus-daemon \
-        gnome-backgrounds gnome-text-editor gnome-calculator nautilus firefox
+    distrobox create -n gnome-dev-51 -i registry.fedoraproject.org/fedora-toolbox:45
+    distrobox enter gnome-dev-51 -- sudo dnf install gnome-shell mutter-devkit dbus-daemon \
+        gnome-backgrounds gnome-text-editor gnome-calculator nautilus xorg-x11-server-Xwayland
+
+(`DEVBOX=<name>` before a dev script picks another one, such as a Fedora 44
+box for GNOME 50.)
 
 Then, on the host:
 

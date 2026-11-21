@@ -6,6 +6,9 @@ dev=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 mode=${NESTED:-window}
 state=$dev/state/$mode
 display=wayland-glance-$mode
+# The distrobox with GNOME Shell to test against (DEVBOX=gnome-dev: the
+# GNOME 50 one).
+box=${DEVBOX:-gnome-dev-51}
 in_session() {
-    distrobox enter gnome-dev -- env DBUS_SESSION_BUS_ADDRESS="$(cat "$state/bus")" "$@"
+    distrobox enter "$box" -- env DBUS_SESSION_BUS_ADDRESS="$(cat "$state/bus")" "$@"
 }
