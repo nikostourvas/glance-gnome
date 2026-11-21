@@ -47,10 +47,12 @@ Glance](#differences-from-glance)).
   don't fit in what is left. A window out of the way stays where it is,
   unless it is hidden.
   Handy to bring what you are working on straight ahead.
-  Super+double-click the empty desktop to park every window. The same
+  Super+double-click the empty desktop to park every window (stashes
+  too). The same
   Super+double-click again undoes it.
 - **Shake.** Shake a window from side to side while dragging it, and every
-  other window is parked.
+  other window is parked, stashes too. With Glance-style dragging, a
+  setting stashes them instead, as in Glance.
 - Each workspace has its own columns and rows of tiles (tiles of windows
   on all workspaces join the current one's).
 - Switching workspaces, tiles slide along as tiles. Opening the overview, a
@@ -103,10 +105,15 @@ In the extension's preferences (Extensions app, Extension Manager, or
   the screen edge, 5-50% of the screen, default 25% as in Glance) and
   **Shrink down to** (the smallest a window gets before the edge zone,
   15-90% of its size, default 15% as in Glance); in the edge zone it goes
-  on to tile size. Switching it off gives stashed windows their full size
+  on to tile size. And **Shake stashes instead of parking**: shaking a
+  window, or Super+double-clicking the desktop, puts the other windows
+  (and the stashes already there) in a column beside the tiles at each
+  side, at one common scale, as in Glance. Switching it off gives stashed windows their full size
   back.
 - **Tiles in overview and workspace switches:** keep parked windows as
   tiles in those animations (on by default; see above).
+
+An **About** tab credits Glance and its author.
 
 Changes apply at once. Tiles at an edge that is switched off move to the
 nearest edge still on, or back to full size if none is.
@@ -167,7 +174,8 @@ nothing needs a logout. It runs from a Fedora 45 (GNOME 51) distrobox:
 
     distrobox create -n gnome-dev-51 -i registry.fedoraproject.org/fedora-toolbox:45
     distrobox enter gnome-dev-51 -- sudo dnf install gnome-shell mutter-devkit dbus-daemon \
-        gnome-backgrounds gnome-text-editor gnome-calculator nautilus xorg-x11-server-Xwayland
+        gnome-backgrounds gnome-text-editor gnome-calculator nautilus xorg-x11-server-Xwayland \
+        gnome-extensions-app
 
 (`DEVBOX=<name>` before a dev script picks another one, such as a Fedora 44
 box for GNOME 50.)

@@ -39,3 +39,10 @@ export function glanceZoneFraction(settings) {
 export function glanceSmallest(settings) {
     return settings.get_double('glance-smallest-percent') / 100;
 }
+
+// Whether shaking (and Super+double-clicking the desktop) stashes the other
+// windows, as in Glance, instead of parking them; only with Glance-style
+// dragging.
+export function scatterToStashes(settings) {
+    return glanceDragging(settings) && settings.get_boolean('scatter-stashes');
+}

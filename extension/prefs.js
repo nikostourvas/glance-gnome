@@ -17,7 +17,7 @@ const EDGES = [
 export default class GlancePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
-        const page = new Adw.PreferencesPage();
+        const page = new Adw.PreferencesPage({title: 'Settings', icon_name: 'preferences-system-symbolic'});
 
         const edges = new Adw.PreferencesGroup({
             title: 'Parking Areas',
@@ -32,7 +32,10 @@ export default class GlancePreferences extends ExtensionPreferences {
         }
         page.add(edges);
 
-        const zone = new Adw.PreferencesGroup({title: 'Dragging'});
+        const zone = new Adw.PreferencesGroup({
+            title: 'Dragging',
+            description: "Dialogs, like this settings window, don't shrink, park or stash.",
+        });
         const width = new Adw.SpinRow({
             title: 'Edge zone width',
             subtitle: 'How close to an edge the pointer must come for a dragged window to shrink ' +
@@ -50,6 +53,8 @@ export default class GlancePreferences extends ExtensionPreferences {
             show_enable_switch: true,
         });
         settings.bind('glance-dragging', glance, 'enable-expansion', Gio.SettingsBindFlags.DEFAULT);
+        // Its settings show whenever it is on.
+        settings.bind('glance-dragging', glance, 'expanded', Gio.SettingsBindFlags.GET);
         const start = new Adw.SpinRow({
             title: 'Start shrinking at',
             subtitle: "The window's edge's distance from the screen edge, in percent of the screen " +
@@ -67,6 +72,13 @@ export default class GlancePreferences extends ExtensionPreferences {
         });
         settings.bind('glance-smallest-percent', smallest, 'value', Gio.SettingsBindFlags.DEFAULT);
         glance.add_row(smallest);
+        const scatter = new Adw.SwitchRow({
+            title: 'Shake stashes instead of parking',
+            subtitle: 'Shaking a window (or Super+double-clicking the desktop) puts the other windows ' +
+                'in a stash beside the tiles at each side, as in Glance, instead of parking them',
+        });
+        settings.bind('scatter-stashes', scatter, 'active', Gio.SettingsBindFlags.DEFAULT);
+        glance.add_row(scatter);
         zone.add(glance);
         page.add(zone);
 
@@ -82,5 +94,34 @@ export default class GlancePreferences extends ExtensionPreferences {
         page.add(animations);
 
         window.add(page);
+        window.add(this._aboutPage());
+    }
+
+    // Credit to Glance, which inspired this extension.
+    _aboutPage() {
+        const page = new Adw.PreferencesPage({title: 'About', icon_name: 'help-about-symbolic'});
+        const credit = new Adw.PreferencesGroup({
+            title: 'Inspired by Glance',
+            description: 'This extension is inspired by Glance, created by Scott Jenson. It is not ' +
+                'a full port: it builds on some of his ideas and code, and changes or adds others.',
+        });
+        credit.add(this._linkRow('Glance for KDE Plasma, by Scott Jenson', 'https://github.com/scottjenson/Glance'));
+        page.add(credit);
+
+        const port = new Adw.PreferencesGroup({
+            title: 'This extension',
+            description: 'MIT License. Copyright (c) 2026 Scott Jenson (Glance) and Nikos Tourvas ' +
+                '(GNOME extension).',
+        });
+        port.add(this._linkRow('Glance for GNOME', this.metadata.url));
+        page.add(port);
+        return page;
+    }
+
+    _linkRow(title, uri) {
+        const row = new Adw.ActionRow({title, subtitle: uri, activatable: true});
+        row.add_suffix(new Gtk.Image({icon_name: 'adw-external-link-symbolic'}));
+        row.connect('activated', () => new Gtk.UriLauncher({uri}).launch(row.get_root(), null, null));
+        return row;
     }
 }

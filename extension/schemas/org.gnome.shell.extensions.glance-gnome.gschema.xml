@@ -38,6 +38,11 @@
       <default>25</default>
       <summary>With Glance-style dragging: where shrinking starts, in percent of the screen width (height for the top and bottom) from an edge</summary>
     </key>
+    <key name="scatter-stashes" type="b">
+      <default>false</default>
+      <summary>With Glance-style dragging: shaking a window (and Super+double-clicking the desktop) stashes the other windows instead of parking them</summary>
+      <description>As in Glance: they go into a column beside the tiles at each side, at one common scale.</description>
+    </key>
     <key name="glance-smallest-percent" type="d">
       <range min="15" max="90"/>
       <default>15</default>

@@ -19,7 +19,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
-import {enabledEdges} from './config.js';
+import {enabledEdges, glanceZoneFraction, scatterToStashes} from './config.js';
 import {clearDrawn, frameRect} from './draw.js';
 import {screenOf, workAreaOf} from './parking.js';
 
@@ -228,10 +228,11 @@ export class Declutter {
         return this._parking.isParked(window) || this._parking.isStashed(window);
     }
 
-    // Every window on `monitor` but `except` (and stashes) is parked, the
-    // parking columns balanced.
+    // Every window on `monitor` but `except`, stashes too, is parked, the
+    // parking columns balanced; or, with the setting (scatter-stashes), they
+    // are stashed (see _stashAll).
     async _scatter(except, monitor) {
-        const movers = this._windows(monitor).filter(w => w !== except && !this._held(w));
+        const movers = this._windows(monitor).filter(w => w !== except && !this._parking.isParked(w));
         if (!movers.length)
             return;
 
@@ -245,6 +246,10 @@ export class Declutter {
         // to the other, so both end up with about as many tiles.
         const enabled = enabledEdges(this._settings);
         let edges = [G.Edge.LEFT, G.Edge.RIGHT].filter(e => enabled.includes(e));
+        if (edges.length && scatterToStashes(this._settings)) {
+            this._stashAll(movers, edges, monitor);
+            return;
+        }
         if (!edges.length)
             edges = [G.Edge.TOP, G.Edge.BOTTOM].filter(e => enabled.includes(e));
         if (!edges.length)
@@ -262,6 +267,46 @@ export class Declutter {
             ? movers.length
             : G.clamp(Math.round((movers.length + secondCount - firstCount) / 2), 0, movers.length);
         movers.forEach((window, i) => this._parking.toParking(window, i < toFirst ? first : second, monitor));
+    }
+
+    // As in Glance: `windows` (and the stashes already there) go into a
+    // stash column at each of the side `edges`, beside its tiles, balanced
+    // by count in their left-to-right order, each column at one common scale
+    // (G.stashColumn).
+    _stashAll(windows, edges, monitor) {
+        const stashes = this._windows(monitor).filter(w => this._parking.isStashed(w) && !windows.includes(w));
+        const all = [...windows, ...stashes];
+        const center = w => {
+            const r = this._parking.drawnRect(w);
+            return r.x + r.width / 2;
+        };
+        all.sort((a, b) => center(a) - center(b));
+        const toFirst = edges.length > 1 ? Math.round(all.length / 2) : all.length;
+        const screen = screenOf(monitor);
+        const area = workAreaOf(monitor);
+        const zone = screen.width * glanceZoneFraction(this._settings);
+        const tiles = G.parkingTile + G.arrangeGap;
+        const columns = [all.slice(0, toFirst), all.slice(toFirst)];
+        edges.forEach((edge, i) => {
+            const column = columns[i];
+            if (!column.length)
+                return;
+            const width = Math.max(zone - tiles, G.parkingTile);
+            const band = {
+                x: edge === G.Edge.LEFT ? screen.x + tiles : screen.x + screen.width - tiles - width,
+                width,
+            };
+            const sizes = column.map(w => this._parking.get(w)?.original ?? frameRect(w));
+            G.stashColumn(sizes, band, area).forEach((place, j) => {
+                const window = column[j];
+                const parked = this._parking.get(window);
+                const origin = parked && !parked.restoring ? parked.origin : frameRect(window);
+                const from = this._parking.drawnRect(window);
+                this._parking.release(window);
+                this._parking.park(window, place, {width: sizes[j].width, height: sizes[j].height}, monitor,
+                    {from, edge, origin, stash: true});
+            });
+        });
     }
 
     // Everything back as it was before the last declutter (windows closed

@@ -166,6 +166,27 @@ export function clearOfTiles(screen, area, edges) {
     return {x: left, y: top, width: right - left, height: bottom - top};
 }
 
+// A stash column (Glance's declutter): windows of full sizes `sizes`, top
+// to bottom, at one common scale that fits them into the width of `band`
+// (the stash zone beside the tiles) and, arrangeGap apart, into the work
+// area's height (no larger than full size, no smaller than minScale),
+// centered in both.
+export function stashColumn(sizes, band, area) {
+    const gaps = arrangeGap * (sizes.length - 1);
+    const total = sizes.reduce((sum, size) => sum + size.height, 0);
+    const widest = Math.max(...sizes.map(size => size.width));
+    const scale = clamp(Math.min(band.width / widest, (area.height - gaps) / total), minScale, 1);
+    let y = area.y + Math.max(0, (area.height - total * scale - gaps) / 2);
+    return sizes.map(size => {
+        const r = {
+            x: band.x + (band.width - size.width * scale) / 2, y,
+            width: size.width * scale, height: size.height * scale,
+        };
+        y += r.height + arrangeGap;
+        return r;
+    });
+}
+
 function overlaps(a, b) {
     return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
