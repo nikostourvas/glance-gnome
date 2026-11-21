@@ -1,3 +1,4 @@
 dev/state/
 extension/schemas/gschemas.compiled
 dist/
+.Rhistory
