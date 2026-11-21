@@ -4,6 +4,8 @@
 # session (its own settings, extensions and session bus). With
 # HOST_EXTENSIONS=1, copies of the extensions enabled in the real session run
 # too, with copies of their settings (dev/run-nested.sh lists and dumps them).
+# With X11=1, X11 apps can run in it too (Xwayland, started on demand; see
+# dev/open.sh).
 set -euo pipefail
 source "$(dirname "$(readlink -f "$0")")/common.sh"
 uuid=$(sed -n 's/.*"uuid": *"\([^"]*\)".*/\1/p' "$dev/../extension/metadata.json")
@@ -52,6 +54,7 @@ if [ "$mode" = headless ]; then
 else
     args=(--devkit --wayland)
 fi
+[ -n "${X11:-}" ] || args+=(--no-x11)
 exec dbus-run-session -- bash -c '
     state=$1 enabled=$2
     shift 2
@@ -67,4 +70,4 @@ exec dbus-run-session -- bash -c '
     dconf write /org/freedesktop/tracker/miner/files/index-recursive-directories "@as []"
     dconf write /org/freedesktop/tracker/miner/files/index-single-directories "@as []"
     exec gnome-shell "$@"
-' bash "$state" "$enabled" "${args[@]}" --no-x11 --wayland-display="$display"
+' bash "$state" "$enabled" "${args[@]}" --wayland-display="$display"

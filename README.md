@@ -22,7 +22,8 @@ Glance](#differences-from-glance)).
   its size; it is only drawn small. Each tile shows its app's icon, as the
   overview does.
 - **Hover previews.** Rest the pointer on a tile and it grows in place to
-  the window's full size (at most 60% of the screen wide). The other tiles
+  the window's full size (at most 60% of the screen wide; X11 apps: see
+  Known limitations). The other tiles
   in its line move out of the way, so the whole preview can be used. Move
   onto another tile to switch to it; leave and it shrinks back.
 - **Unparking.** Super+double-click a tile and the window goes back to its
@@ -113,7 +114,11 @@ nearest edge still on, or back to full size if none is.
   is.
 - A menu of a parked window can open in the wrong place if Mutter keeps the
   window's frame partly off screen.
-- X11 (Xwayland) apps are untested.
+- X11 (Xwayland) apps get clicks where their (invisible) full-size window
+  is, not where they are drawn. Their hover previews are always shown at
+  full size, with the window moved there, so they can be used as usual;
+  a click on such a tile itself lands on whatever part of the full-size
+  window is there.
 
 ## Differences from Glance
 
@@ -161,6 +166,8 @@ Then, on the host:
     dev/workspace.sh 2                # switch the nested shell to workspace 2
     HOST_EXTENSIONS=1 dev/run-nested.sh  # also run copies of the real session's enabled
                                          # extensions, with copies of their settings
+    X11=1 dev/run-nested.sh           # also let X11 (Xwayland) apps run in it, then:
+    X11=1 dev/open.sh gnome-calculator   # open an app as an X11 app
     dev/pack.sh                       # build dist/<uuid>.shell-extension.zip
     dev/install.sh                    # install it in the real session
 

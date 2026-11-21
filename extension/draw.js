@@ -1,8 +1,9 @@
 // Where windows are drawn when that isn't where their frame is: the
 // frame's top-left drawn at (x, y), scaled by `scale`, set as a scale and a
-// translation on the window actor. Mutter maps pointer input through the
-// actor's transform, so a window drawn small stays usable. Menus and
-// tooltips of such a window follow it (see followParent).
+// translation on the window actor. Mutter maps pointer input to Wayland
+// apps through the actor's transform, so a window drawn small stays usable
+// (X11 apps get it where their frame is: see ParkedWindows.setPreview).
+// Menus and tooltips of such a window follow it (see followParent).
 
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';

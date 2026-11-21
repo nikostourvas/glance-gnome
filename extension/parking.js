@@ -219,8 +219,15 @@ export class ParkedWindows {
     }
 
     // Draws a parked window at `rect` instead of its home spot (null: back
-    // home), gliding there: as a preview, or moved aside for one.
+    // home), gliding there: as a preview, or moved aside for one. A preview
+    // at full size takes the window's frame along (and leaves it there):
+    // Mutter gives an X11 (Xwayland) app clicks where its frame is, not
+    // where it is drawn.
     setPreview(window, rect) {
+        const frame = frameRect(window);
+        if (rect && G.near(rect.width, frame.width) && G.near(rect.height, frame.height) &&
+            (frame.x !== rect.x || frame.y !== rect.y))
+            window.move_frame(true, rect.x, rect.y);
         this._setInstead(window, 'preview', rect);
     }
 

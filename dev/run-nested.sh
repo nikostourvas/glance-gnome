@@ -3,7 +3,8 @@
 # in a window, or with NESTED=headless without one (SIZE=2560x1080 sets its
 # screen). HOST_EXTENSIONS=1 also runs copies of the extensions enabled in the
 # real session, with copies of their settings (read only from the real
-# session). Log: dev/state/<window|headless>/shell.log.
+# session). X11=1 lets X11 apps run in it (dev/open.sh). Log:
+# dev/state/<window|headless>/shell.log.
 set -euo pipefail
 source "$(dirname "$(readlink -f "$0")")/common.sh"
 "$dev/stop-nested.sh"
@@ -14,7 +15,7 @@ if [ -n "${HOST_EXTENSIONS:-}" ]; then
     gnome-extensions list --enabled | grep -vxF "$uuid" >"$state/host-extensions"
     dconf dump /org/gnome/shell/extensions/ >"$state/host-extension-settings.ini"
 fi
-setsid distrobox enter gnome-dev -- env NESTED="$mode" SIZE="${SIZE:-}" HOST_EXTENSIONS="${HOST_EXTENSIONS:-}" \
+setsid distrobox enter gnome-dev -- env NESTED="$mode" SIZE="${SIZE:-}" HOST_EXTENSIONS="${HOST_EXTENSIONS:-}" X11="${X11:-}" \
     "$dev/nested-session.sh" \
     >"$state/shell.log" 2>&1 </dev/null &
 for _ in $(seq 60); do

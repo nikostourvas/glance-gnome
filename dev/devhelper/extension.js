@@ -5,6 +5,7 @@
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const sleep = ms => new Promise(resolve => {
@@ -23,6 +24,13 @@ export default class DevHelper extends Extension {
         const pointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
         const keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
         this._devices = [pointer, keyboard];
+
+        // When an X11 app starts (in a session started with X11=1), GNOME
+        // Shell starts the session's X11 services as systemd units, which
+        // fails in the distrobox, and then Mutter doesn't manage X11 windows:
+        // carry on without those services.
+        this._startX11Services = Main.wm._startX11Services;
+        Main.wm._startX11Services = task => task.return_boolean(true);
 
         globalThis.dev = {
             sleep,
@@ -97,6 +105,7 @@ export default class DevHelper extends Extension {
     }
 
     disable() {
+        Main.wm._startX11Services = this._startX11Services;
         delete globalThis.dev;
         this._devices = null;
     }

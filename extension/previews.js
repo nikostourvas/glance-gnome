@@ -1,6 +1,7 @@
 // Hover previews: hovering a parking tile grows it in place to its app's
-// real size (1:1, so sharp, no wider than previewMaxWidth of the screen;
-// Glance grows it 2.5x), against its screen edge, centered on its spot. The
+// real size (1:1, so sharp, no wider than previewMaxWidth of the screen
+// unless it is an X11 app, which gets clicks only at 1:1; Glance grows it
+// 2.5x), against its screen edge, centered on its spot. The
 // other tiles in its line (a column at a side, a row at the top or bottom) move
 // aside, so the pointer can roam the preview (Glance leaves them under
 // it). The first preview opens after previewDelay; moving onto another tile
@@ -9,6 +10,7 @@
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
@@ -115,10 +117,11 @@ export class HoverPreviews {
     }
 
     // The app at its real size (no taller than the work area, no wider than
-    // previewMaxWidth of the screen), against its edge, centered along it on
-    // its spot (where it is now, home or aside), but moved to leave room for
-    // at least one tile of its line on each side, as long as the pointer
-    // stays on it.
+    // previewMaxWidth of the screen, or the screen for an X11 app: see
+    // ParkedWindows.setPreview), against its edge, centered along it on its
+    // spot (where it is now, home or aside), but moved to leave room for at
+    // least one tile of its line on each side, as long as the pointer stays
+    // on it; on whole pixels, so the frame can go there too.
     _previewRect(window) {
         const parked = this._parking.get(window);
         const {edge} = parked;
@@ -126,7 +129,10 @@ export class HoverPreviews {
         const area = workAreaOf(parked.monitor);
         const frame = frameRect(window);
         const spot = parked.aside ?? parked.shown;
-        const scale = Math.min(1, area.height / frame.height, screen.width * G.previewMaxWidth / frame.width);
+        const maxWidth = window.get_client_type() === Meta.WindowClientType.X11
+            ? screen.width
+            : screen.width * G.previewMaxWidth;
+        const scale = Math.min(1, area.height / frame.height, maxWidth / frame.width);
         const rect = {width: frame.width * scale, height: frame.height * scale};
         // Across its line: against the edge.
         if (edge === G.Edge.TOP)
@@ -155,7 +161,7 @@ export class HoverPreviews {
         const margin = 20;
         start = G.clamp(start, pointer + margin - rect[size], pointer - margin);
         rect[pos] = G.clamp(start, bounds.start, Math.max(bounds.start, bounds.start + bounds.length - rect[size]));
-        return rect;
+        return {...rect, x: Math.round(rect.x), y: Math.round(rect.y)};
     }
 
     _open(window) {
