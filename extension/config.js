@@ -23,8 +23,19 @@ export function zoneFraction(settings) {
 }
 
 // Whether windows are dragged as in Glance for KDE: shrinking once their
-// edge is within glanceZone of a screen edge, and stashed where dropped
-// short of parking size (see drag.js).
+// edge comes near a screen edge, and stashed where dropped short of it (see
+// drag.js).
 export function glanceDragging(settings) {
     return settings.get_boolean('glance-dragging');
+}
+
+// With Glance-style dragging: where shrinking starts, as a fraction of the
+// screen's width (its height for the top and bottom) from an edge, and the
+// smallest a window gets before the edge zone, as a fraction of full size.
+export function glanceZoneFraction(settings) {
+    return settings.get_double('glance-zone-percent') / 100;
+}
+
+export function glanceSmallest(settings) {
+    return settings.get_double('glance-smallest-percent') / 100;
 }

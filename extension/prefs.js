@@ -36,21 +36,37 @@ export default class GlancePreferences extends ExtensionPreferences {
         const width = new Adw.SpinRow({
             title: 'Edge zone width',
             subtitle: 'How close to an edge the pointer must come for a dragged window to shrink ' +
-                'and park, in percent of the screen width',
+                'to tile size and park, in percent of the screen width',
             adjustment: new Gtk.Adjustment({lower: 1, upper: 20, step_increment: 0.5, page_increment: 1}),
             digits: 1,
         });
         settings.bind('zone-percent', width, 'value', Gio.SettingsBindFlags.DEFAULT);
-        settings.bind('glance-dragging', width, 'sensitive',
-            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.INVERT_BOOLEAN);
         zone.add(width);
-        const glance = new Adw.SwitchRow({
+        const glance = new Adw.ExpanderRow({
             title: 'Drag and stash as in Glance',
-            subtitle: 'As in Glance for KDE: a dragged window shrinks once its edge comes within a ' +
-                'quarter of the screen of an edge. Dropped there, it stays as small as it is (a ' +
-                'stash); dropped against the edge at tile size, it parks',
+            subtitle: 'As in Glance for KDE: a dragged window starts shrinking farther out, once its ' +
+                'edge comes near an edge. Dropped there, it stays as small as it is (a stash); ' +
+                'dropped in the edge zone, it parks',
+            show_enable_switch: true,
         });
-        settings.bind('glance-dragging', glance, 'active', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('glance-dragging', glance, 'enable-expansion', Gio.SettingsBindFlags.DEFAULT);
+        const start = new Adw.SpinRow({
+            title: 'Start shrinking at',
+            subtitle: "The window's edge's distance from the screen edge, in percent of the screen " +
+                'width (height for the top and bottom)',
+            adjustment: new Gtk.Adjustment({lower: 5, upper: 50, step_increment: 1, page_increment: 5}),
+            digits: 0,
+        });
+        settings.bind('glance-zone-percent', start, 'value', Gio.SettingsBindFlags.DEFAULT);
+        glance.add_row(start);
+        const smallest = new Adw.SpinRow({
+            title: 'Shrink down to',
+            subtitle: 'The smallest a window gets before the edge zone, in percent of its full size',
+            adjustment: new Gtk.Adjustment({lower: 15, upper: 90, step_increment: 5, page_increment: 10}),
+            digits: 0,
+        });
+        settings.bind('glance-smallest-percent', smallest, 'value', Gio.SettingsBindFlags.DEFAULT);
+        glance.add_row(smallest);
         zone.add(glance);
         page.add(zone);
 

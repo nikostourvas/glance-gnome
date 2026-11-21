@@ -31,7 +31,17 @@
     <key name="glance-dragging" type="b">
       <default>false</default>
       <summary>Drag and stash windows as in Glance for KDE</summary>
-      <description>A dragged window shrinks once its edge comes within a quarter of the screen of an enabled edge. Dropped there it stays as small as it is drawn (a stash); dropped at tile size, against the edge, it parks. The edge zone width isn't used then.</description>
+      <description>A dragged window shrinks once its edge comes within glance-zone-percent of an enabled edge, down to glance-smallest-percent. Dropped there it stays as small as it is drawn (a stash); dropped with the pointer in the edge zone (zone-percent), or at tile size, it parks.</description>
+    </key>
+    <key name="glance-zone-percent" type="d">
+      <range min="5" max="50"/>
+      <default>25</default>
+      <summary>With Glance-style dragging: where shrinking starts, in percent of the screen width (height for the top and bottom) from an edge</summary>
+    </key>
+    <key name="glance-smallest-percent" type="d">
+      <range min="15" max="90"/>
+      <default>15</default>
+      <summary>With Glance-style dragging: the smallest a dragged window gets before the edge zone, in percent of its full size</summary>
     </key>
   </schema>
 </schemalist>

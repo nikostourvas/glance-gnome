@@ -25,8 +25,10 @@ Glance](#differences-from-glance)).
   Glance for KDE, a dragged window shrinks once its edge comes within a
   quarter of the screen of an enabled edge, the closer the smaller. Drop it
   there and it stays where and as small as it is, still usable (a stash);
-  drop it against the edge at tile size and it parks. Drag a stash out of
-  the zone to give it its full size back.
+  drop it with the pointer in the edge zone, or at tile size, and it parks.
+  Drag a stash out of the zone to give it its full size back. Where the
+  shrinking starts and how small it gets before the edge zone are
+  settings.
 - **Hover previews.** Rest the pointer on a tile and it grows in place to
   the window's full size (at most 60% of the screen wide; X11 apps: see
   Known limitations). The other tiles
@@ -97,8 +99,12 @@ In the extension's preferences (Extensions app, Extension Manager, or
   percent of the screen width (1-20%), for a dragged window to shrink and
   park.
 - **Drag and stash as in Glance:** Glance's zones and stashes instead (see
-  above); the edge zone width isn't used then. Switching it off gives
-  stashed windows their full size back.
+  above). Under it: **Start shrinking at** (the window's edge this far from
+  the screen edge, 5-50% of the screen, default 25% as in Glance) and
+  **Shrink down to** (the smallest a window gets before the edge zone,
+  15-90% of its size, default 15% as in Glance); in the edge zone it goes
+  on to tile size. Switching it off gives stashed windows their full size
+  back.
 - **Tiles in overview and workspace switches:** keep parked windows as
   tiles in those animations (on by default; see above).
 

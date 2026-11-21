@@ -8,10 +8,6 @@
 // and only the side edges.)
 // Scale at the very edge of the screen.
 export const minScale = 0.15;
-// With Glance-style dragging (a setting, see config.js): the edge zones'
-// width, as a fraction of the screen's width (its height for the top and
-// bottom), measured from the window's edge.
-export const glanceZone = 0.25;
 // But parking icons are at least this on their longer side.
 export const parkingMinSize = 180;
 // Dropped at this scale or larger, a window goes back to full size.
@@ -78,10 +74,21 @@ export function near(a, b) {
 // at the screen edge. The drawn edge is at d = pointerToScreenEdge -
 // pointerToWindowEdge * s from the screen edge (the latter measured at full
 // size), and s = minScale + (1 - minScale) * d / zoneWidth; solved for s
-// (above 1: still full size).
-export function edgeScale(pointerToScreenEdge, pointerToWindowEdge, zoneWidth) {
-    const k = (1 - minScale) / zoneWidth;
-    return (minScale + k * pointerToScreenEdge) / (1 + k * pointerToWindowEdge);
+// (above 1: still full size). `floor` replaces minScale.
+export function edgeScale(pointerToScreenEdge, pointerToWindowEdge, zoneWidth, floor = minScale) {
+    const k = (1 - floor) / zoneWidth;
+    return (floor + k * pointerToScreenEdge) / (1 + k * pointerToWindowEdge);
+}
+
+// Glance-style dragging with settings: by the window's edge (edgeScale)
+// within `zoneWidth`, but no smaller than `floor`; then, with the pointer
+// within `strip` of the screen edge, on down to minScale at the edge (from
+// wherever it was as it entered, so nothing jumps).
+export function glanceScale(pointerToScreenEdge, pointerToWindowEdge, zoneWidth, floor, strip) {
+    const outer = clamp(edgeScale(pointerToScreenEdge, pointerToWindowEdge, zoneWidth, floor), floor, 1);
+    if (pointerToScreenEdge >= strip)
+        return outer;
+    return minScale + (outer - minScale) * Math.max(0, pointerToScreenEdge) / strip;
 }
 
 // Scale of a dragged window whose pointer is `pointerToEdge` from a screen
