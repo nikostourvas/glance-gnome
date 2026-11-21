@@ -111,7 +111,7 @@ export default class GlancePreferences extends ExtensionPreferences {
         const port = new Adw.PreferencesGroup({
             title: 'This extension',
             description: 'MIT License. Copyright (c) 2026 Scott Jenson (Glance) and Nikos Tourvas ' +
-                '(GNOME extension).',
+                '(Glance for GNOME).',
         });
         port.add(this._linkRow('Glance for GNOME', this.metadata.url));
         page.add(port);

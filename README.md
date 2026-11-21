@@ -4,9 +4,9 @@ A GNOME Shell extension that parks windows at the screen edges. Drag a
 window toward an edge and it shrinks; let go and it becomes a small, live
 tile there. Hover a tile to see and use the window at full size.
 
-Based on Scott Jenson's [Glance](https://github.com/scottjenson/Glance), a
+Inspired by Scott Jenson's [Glance](https://github.com/scottjenson/Glance), a
 window-management experiment for wide monitors on KDE Plasma, whose design
-and rules it follows, with some changes (see [Differences from
+and rules it builds on, with its own changes (see [Differences from
 Glance](#differences-from-glance)).
 
 ## Features
@@ -144,7 +144,7 @@ nearest edge still on, or back to full size if none is.
 
 ## Differences from Glance
 
-Glance's design, from its `docs/`, is the basis. By choice, this extension
+Glance's design, from its `docs/`, is the starting point. By choice, this extension
 has no stashes unless Glance-style dragging is on (Glance keeps windows
 dropped before the very edge where and as large as drawn), keeps parked
 apps at their size (Glance lays them out as
@@ -154,7 +154,7 @@ instead of filling the nearer half of the screen and stashing the rest,
 shrinks windows by the pointer's distance to
 an edge rather than the window's, in narrower zones (Glance: the window's
 edge within 25% of the screen per side; Glance-style dragging does that),
-and can park at the top and bottom. Not ported: tilted
+and can park at the top and bottom. Left out: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 
@@ -203,7 +203,14 @@ Each nested session has its own settings, extensions and session bus under
 there) enables `dev/eval.sh` and provides a virtual pointer for scripted
 drags. Log: `dev/state/<window|headless>/shell.log` (lines start `glance:`).
 
+## Issues and requests
+
+This is a personal project, shared as is. Issues for bugs and ideas are
+welcome, and some may be fixed or built, but there is no promise of support,
+fixes or new features, nor of when they would come. Pull requests may be
+reviewed slowly or not merged.
+
 ## License
 
-MIT, see [LICENSE](LICENSE). Contains logic ported from Glance, Copyright
-(c) 2026 Scott Jenson.
+MIT, see [LICENSE](LICENSE). Inspired by Glance and contains some of its
+logic, Copyright (c) 2026 Scott Jenson.
