@@ -7,6 +7,11 @@
 // it). The first preview opens after previewDelay; moving onto another tile
 // switches at once; leaving shrinks it after previewGrace. Glance's
 // kwin/previews.cpp and docs/hover-previews.md.
+//
+// A stash of an X11 app gets a preview too: X11 apps get clicks only at
+// 1:1 where their frame is, so a stash, drawn small, can't be used as it
+// is. Hovering it grows it to its real size over its spot (kept in the
+// work area), and its frame goes there.
 
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -22,6 +27,10 @@ const BUTTONS = Clutter.ModifierType.BUTTON1_MASK | Clutter.ModifierType.BUTTON2
 
 function contains(r, x, y) {
     return x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height;
+}
+
+function isX11(window) {
+    return window.get_client_type() === Meta.WindowClientType.X11;
 }
 
 export class HoverPreviews {
@@ -68,7 +77,27 @@ export class HoverPreviews {
             if (contains({...spot, y: spot.y - G.arrangeGap / 2, height: spot.height + G.arrangeGap}, x, y))
                 return window;
         }
+        return this._x11StashAt(x, y);
+    }
+
+    // The stash of an X11 app drawn at (x, y), if no other window is
+    // over it there.
+    _x11StashAt(x, y) {
+        const workspace = global.workspace_manager.get_active_workspace();
+        const windows = global.display.sort_windows_by_stacking(global.get_window_actors()
+            .map(a => a.meta_window)
+            .filter(w => !w.minimized && w.located_on_workspace(workspace) &&
+                w.get_window_type() === Meta.WindowType.NORMAL));
+        for (const window of windows.reverse()) {
+            if (!contains(this._parking.drawnRect(window), x, y))
+                continue;
+            return this._parking.isStashed(window) && isX11(window) ? window : null;
+        }
         return null;
+    }
+
+    _previewable(window) {
+        return this._parking.isParked(window) || (this._parking.isStashed(window) && isX11(window));
     }
 
     // On every pointer motion: open, switch or close previews. Anywhere on
@@ -110,7 +139,7 @@ export class HoverPreviews {
             this._candidate = icon;
             this._openTimer = this._after(G.previewDelay, () => {
                 this._openTimer = 0;
-                if (this._candidate && this._parking.isParked(this._candidate))
+                if (this._candidate && this._previewable(this._candidate))
                     this._open(this._candidate);
             });
         }
@@ -124,6 +153,8 @@ export class HoverPreviews {
     // on it; on whole pixels, so the frame can go there too.
     _previewRect(window) {
         const parked = this._parking.get(window);
+        if (parked.stash)
+            return this._stashPreviewRect(window, parked);
         const {edge} = parked;
         const screen = screenOf(parked.monitor);
         const area = workAreaOf(parked.monitor);
@@ -164,6 +195,21 @@ export class HoverPreviews {
         return {...rect, x: Math.round(rect.x), y: Math.round(rect.y)};
     }
 
+    // An X11 stash's preview: its real size (no larger than the work area),
+    // centered on its spot, inside the work area, on whole pixels.
+    _stashPreviewRect(window, parked) {
+        const area = workAreaOf(parked.monitor);
+        const frame = frameRect(window);
+        const scale = Math.min(1, area.width / frame.width, area.height / frame.height);
+        const width = frame.width * scale;
+        const height = frame.height * scale;
+        const spot = parked.shown;
+        const spotHeight = spot.width * frame.height / frame.width;
+        const x = G.clamp(spot.x + spot.width / 2 - width / 2, area.x, area.x + area.width - width);
+        const y = G.clamp(spot.y + spotHeight / 2 - height / 2, area.y, area.y + area.height - height);
+        return {x: Math.round(x), y: Math.round(y), width, height};
+    }
+
     _open(window) {
         const old = this._current();
         if (old && old !== window)
@@ -173,7 +219,10 @@ export class HoverPreviews {
         this._parking.setPreview(window, rect);
         this._preview = window;
         window.raise();
-        this._moveAside(window, rect);
+        if (this._parking.isParked(window))
+            this._moveAside(window, rect);
+        else
+            this._clearAside();
     }
 
     _close(window) {

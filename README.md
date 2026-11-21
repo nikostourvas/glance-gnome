@@ -156,8 +156,9 @@ and log out and back in. To remove it:
   is.
 - A menu of a parked window that is larger than the screen can open in the
   wrong place (the window's hidden full-size frame can't fit on screen).
-- X11 (Xwayland) apps work in their hover previews as usual. A click on the
-  small tile itself, before the preview opens, lands on the hidden
+- X11 (Xwayland) apps work in their hover previews as usual; their stashes
+  get a hover preview too, at full size over the stash. A click on the
+  small tile or stash itself, before the preview opens, lands on the hidden
   full-size window instead (GNOME sends clicks to X11 apps by where the
   window really is, not where it is drawn).
 
