@@ -224,6 +224,50 @@ export function stashColumn(sizes, band, area, floor = minScale, atLeft = true) 
     return {places, fits};
 }
 
+// A stash grid (Super+triple-click, see Declutter): windows of full sizes
+// `sizes`, in order, in rows of as many as leave them largest, all at one
+// scale that fits the rows (their windows arrangeGap apart) side by side
+// and one above the other into `room`, but no larger than full size. Each
+// row is centered, and the rows together. Returns {places, scale}.
+export function stashGrid(sizes, room) {
+    let best = null;
+    for (let columns = 1; columns <= sizes.length; columns++) {
+        const rows = [];
+        for (let i = 0; i < sizes.length; i += columns)
+            rows.push(sizes.slice(i, i + columns));
+        const byWidth = Math.min(...rows.map(row =>
+            (room.width - arrangeGap * (row.length - 1)) / row.reduce((sum, s) => sum + s.width, 0)));
+        const byHeight = (room.height - arrangeGap * (rows.length - 1)) /
+            rows.reduce((sum, row) => sum + Math.max(...row.map(s => s.height)), 0);
+        const scale = Math.min(byWidth, byHeight, 1);
+        if (scale > 0 && (!best || scale > best.scale + 1e-3))
+            best = {columns, scale};
+    }
+    if (!best)
+        return {places: [], scale: 0};
+    const {columns, scale} = best;
+    const rows = [];
+    for (let i = 0; i < sizes.length; i += columns)
+        rows.push(sizes.slice(i, i + columns).map((_, j) => i + j));
+    const heights = rows.map(row => Math.max(...row.map(i => sizes[i].height * scale)));
+    let y = room.y + (room.height - heights.reduce((a, b) => a + b, 0) - arrangeGap * (rows.length - 1)) / 2;
+    const places = [];
+    rows.forEach((row, r) => {
+        const width = row.reduce((sum, i) => sum + sizes[i].width * scale, 0) + arrangeGap * (row.length - 1);
+        let x = room.x + (room.width - width) / 2;
+        for (const i of row) {
+            const w = sizes[i].width * scale, h = sizes[i].height * scale;
+            places[i] = {
+                x: Math.round(x), y: Math.round(y + (heights[r] - h) / 2),
+                width: Math.round(w), height: Math.round(h),
+            };
+            x += w + arrangeGap;
+        }
+        y += heights[r] + arrangeGap;
+    });
+    return {places, scale};
+}
+
 function overlaps(a, b) {
     return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }

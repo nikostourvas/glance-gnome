@@ -1,7 +1,7 @@
 #!/bin/bash
 # Starts (or restarts) a nested GNOME Shell with the extension as it is now:
 # in a window, or with NESTED=headless without one (SIZE=2560x1080 sets its
-# screen). HOST_EXTENSIONS=1 also runs copies of the extensions enabled in the
+# screen, or about the window's). HOST_EXTENSIONS=1 also runs copies of the extensions enabled in the
 # real session, with copies of their settings (read only from the real
 # session). X11=1 lets X11 apps run in it (dev/open.sh). Log:
 # dev/state/<window|headless>/shell.log.

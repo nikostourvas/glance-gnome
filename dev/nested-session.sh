@@ -62,6 +62,9 @@ if [ "$mode" != window ]; then
     args=(--headless --virtual-monitor "${SIZE:-2560x1080}")
 else
     args=(--devkit --wayland)
+    # SIZE: the size of the devkit window, about that of the screen in it
+    # (its header bar takes some), else 1280x800.
+    [ -z "${SIZE:-}" ] || args+=(--devkit-args="--monitor-size=$SIZE")
 fi
 [ -n "${X11:-}" ] || args+=(--no-x11)
 exec dbus-run-session -- bash -c '
@@ -74,6 +77,11 @@ exec dbus-run-session -- bash -c '
     dconf write /org/gnome/shell/enabled-extensions "[$enabled]"
     dconf write /org/gnome/shell/welcome-dialog-last-shown-version "\"999\""
     dconf write /org/gnome/desktop/interface/enable-hot-corners false
+    # The desktop around a nested window keeps Super+clicks for itself, so
+    # there Alt moves windows, and does the Super+click gestures.
+    if [ "${NESTED:-window}" = window ]; then
+        dconf write /org/gnome/desktop/wm/preferences/mouse-button-modifier "\"<Alt>\""
+    fi
     dconf reset /org/gnome/shell/disabled-extensions
     # The file indexer would crawl the real home folder.
     dconf write /org/freedesktop/tracker/miner/files/index-recursive-directories "@as []"

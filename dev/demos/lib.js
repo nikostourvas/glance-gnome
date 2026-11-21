@@ -64,6 +64,41 @@ async function doubleClick({superKey = false} = {}) {
     await dev.sleep(300);
 }
 
+// A ring that widens and fades where the pointer is, so a click shows.
+function ripple() {
+    const size = 64;
+    const ring = new St.Widget({
+        style: 'border: 4px solid rgba(255, 255, 255, 0.95); border-radius: 999px; ' +
+            'background-color: rgba(53, 132, 228, 0.45);',
+        width: size, height: size,
+    });
+    Main.layoutManager.uiGroup.add_child(ring);
+    ring.set_pivot_point(0.5, 0.5);
+    ring.set_position(Math.round(at[0] - size / 2), Math.round(at[1] - size / 2));
+    ring.set_scale(0.3, 0.3);
+    ring.ease({
+        scale_x: 1.3, scale_y: 1.3, opacity: 0, duration: 500,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        onComplete: () => ring.destroy(),
+    });
+}
+
+// Clicks `n` times where the pointer is, holding Super, each click shown
+// by a ring.
+async function superClicks(n) {
+    dev.key(Clutter.KEY_Super_L, true);
+    await dev.sleep(150);
+    for (let i = 0; i < n; i++) {
+        dev.press();
+        ripple();
+        await dev.sleep(60);
+        dev.release();
+        await dev.sleep(110);
+    }
+    dev.key(Clutter.KEY_Super_L, false);
+    await dev.sleep(300);
+}
+
 // A caption at the bottom middle of the screen (none: hides it).
 function caption(text) {
     let label = globalThis.demoCaption;

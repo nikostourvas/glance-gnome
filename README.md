@@ -74,7 +74,8 @@ pointer](docs/shake-many.gif)
 
 ## Gestures
 
-The Super key (Windows / Meta) is the window system's key:
+The Super key (Windows / Meta) is the window system's key (or the "Window
+Action Key" set in GNOME Tweaks):
 
 - **Super + double-click a window** to focus on it: it moves to the middle
   of the screen at its size (smaller only if it doesn't fit), and the
@@ -88,7 +89,27 @@ The Super key (Windows / Meta) is the window system's key:
   back to its size and to where it was before it was parked.
 - **Super + double-click the empty desktop** to stash or park every
   window, as a shake does. Do it again to undo.
+- **Super + triple-click a window** to work in it with the others beside
+  it: it takes the left half of the screen (more only if the app needs
+  it), and the other windows line up on the right as stashes in a grid,
+  all at one size, as large as fits. If that would draw them smaller than
+  "Shrink down to" (70% by default), the least recently used park as tiles
+  instead. Tiles stay where they are.
+  - Super + triple-click a stash of the grid to swap it with the main
+    window, or a tile to make it the main window.
+  - Super + triple-click the main window to undo: every window goes back to
+    how it was before the first triple-click.
 - **Super + drag** moves a window or tile from anywhere inside it.
+
+A Super + double-click on a window acts once the double-click time has
+passed (400 ms by default), in case a third click follows.
+
+Super + triple-clicking a window puts it beside the others:
+
+![Notes is Super+triple-clicked: it fills the left half of the screen, and
+Calendar, Clocks, Characters and Recipes line up in a grid on the right.
+Calendar is triple-clicked and swaps places with Notes; triple-clicking
+Calendar again puts every window back](docs/tiling.gif)
 
 ## Settings
 
@@ -134,8 +155,6 @@ In the extension's preferences (the Extensions app, Extension Manager, or
   "Shrink down to". Only if they all show whole that way: else they are
   parked (or, with no edge parking, stashed anyway, overlapping from top
   to bottom).
-
-**About:** credits Glance and its author.
 
 Dialogs, like the settings window itself, don't shrink, park or stash.
 Changes apply at once; tiles at an edge parking is switched off at move to
@@ -198,18 +217,19 @@ and log out and back in. To remove it:
 ## Differences from Glance
 
 Glance's design, from its `docs/`, is the starting point. By choice, this
-extension stashes only at the edges stashing is on at (the sides by
-default; Glance keeps windows dropped before any edge where and as large
-as drawn), starts shrinking a window nearer the edge and shrinks it less
-(by default from its edge within 5% of the screen, down to 70%; Glance:
-25%, down to 15%), parks once the pointer reaches a thin edge zone (at
-edges that only park, it shrinks windows by the pointer's distance to the
-edge too), keeps parked apps at their size (Glance lays them out as
-phone-sized squares), shows the whole window in previews, moves
-neighbouring tiles out of a preview's way, centers a Super+double-clicked
-window instead of filling the nearer half of the screen and stashing the
-rest, and can park at the top and bottom. Left out: tilted
-tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
+extension stashes only at the edges stashing is on at (the sides by default;
+Glance keeps windows dropped before any edge where and as large as drawn),
+starts shrinking a window nearer the edge and shrinks it less (by default
+from its edge within 5% of the screen, down to 70%; Glance: 25%, down to
+15%), parks once the pointer reaches a thin edge zone (at edges that only
+park, it shrinks windows by the pointer's distance to the edge too), keeps
+parked apps at their size (Glance lays them out as phone-sized squares),
+shows the whole window in previews, moves neighbouring tiles out of a
+preview's way, centers a Super+double-clicked window (filling half the
+screen and stashing the rest, as Glance's double-click does, is
+Super+triple-click here, always the left half, with the rest in a grid
+beside it), and can park at the top and bottom. Left out: tilted tiles,
+grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 
 ## Under the hood
@@ -237,11 +257,13 @@ box for GNOME 50.)
 Then, on the host:
 
     dev/run-nested.sh                 # (re)start the nested shell in a window
+    SIZE=1920x1080 dev/run-nested.sh  # the same, in a window about that size
     dev/open.sh gnome-text-editor     # open an app in it
     NESTED=headless dev/run-nested.sh # a second one without a window, for scripted tests
     NESTED=headless dev/eval.sh "$(cat dev/tests/park-right.js)"
     NESTED=headless dev/shot.sh       # screenshot
     gjs -m dev/tests/place-around.js  # where centering puts other windows (no shell needed)
+    gjs -m dev/tests/stash-grid.js    # the triple-click grid (no shell needed)
     NESTED=headless dev/scale.sh 2    # change its monitor's scale (a resolution change)
     dev/prefs.sh                      # open the extension's settings in the nested shell
     dev/workspace.sh 2                # switch the nested shell to workspace 2
@@ -253,9 +275,11 @@ Then, on the host:
     dev/install.sh                    # install it in the real session
 
 Each nested session has its own settings, extensions and session bus under
-`dev/state/`; the real session isn't touched. `dev/devhelper` (loaded only
-there) enables `dev/eval.sh` and provides a virtual pointer for scripted
-drags. Log: `dev/state/<window|headless>/shell.log` (lines start `glance:`).
+`dev/state/`; the real session isn't touched. In the nested window, Alt does
+what Super does, since the desktop around it keeps Super + clicks for
+itself. `dev/devhelper` (loaded only there) enables `dev/eval.sh` and
+provides a virtual pointer for scripted drags. Log:
+`dev/state/<window|headless>/shell.log` (lines start `glance:`).
 
 ## Issues and requests
 
