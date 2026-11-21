@@ -9,9 +9,13 @@ and it becomes a small tile there, like an icon on a shelf, yet it stays
 live and usable. Rest the pointer on a tile to see and use the window at
 full size.
 
+![Notes is dragged toward the right side, shrinks, and stays there as a
+stash; Calculator is dragged to the left edge and parks as a tile, which
+grows to full size while the pointer rests on it](docs/stash-and-park.gif)
+
 ## How it works
 
-The screen has two kinds of areas, three with stashing on:
+The screen has three kinds of areas:
 
 - **The middle:** windows here are full size, wherever and however large
   they are.
@@ -20,15 +24,18 @@ The screen has two kinds of areas, three with stashing on:
   zone shrinks; dropped there, it parks.
 - **Parking:** the tiles themselves, in a column at each side, or a row at
   the top or bottom.
-- **Stash** (at edges stashing is on at, off by default, see Settings): the
-  wider band between the middle and an edge, where windows shrink as they
-  near the edge and stay as small as they are drawn.
+- **Stash** (at edges stashing is on at: left and right by default, see
+  Settings): the band between the middle and an edge, where windows shrink
+  as they near the edge and stay as small as they are drawn.
 
 Key mechanics:
 
-- **Dragging a window toward an edge shrinks it.** It stays full size until
-  the pointer enters an edge zone, then shrinks around the pointer, the
-  closer to the edge the smaller.
+- **Dragging a window toward an edge shrinks it.** Toward an edge that
+  stashes (the sides, by default), it starts shrinking once its own edge
+  comes near the screen edge, down to "Shrink down to" (see Settings), and
+  shrinks on to tile size in the edge zone. Toward an edge that only
+  parks, it stays full size until the pointer enters the edge zone, then
+  shrinks around the pointer, the closer to the edge the smaller.
 - **Dropping it in the zone parks it** as a 180 px tile. The tiles of each
   edge keep to a centered line, which rearranges itself as windows come
   and go. A line too long for its edge shrinks its tiles together, down to
@@ -45,13 +52,25 @@ Key mechanics:
   where it is dropped. Tiles are easiest to grab with Super+drag, from
   anywhere in the tile.
 - **Shake a window** from side to side while dragging it, and every other
-  window is parked.
+  window is stashed at the sides, where stashing is on and they all fit
+  whole there, or else parked.
 - **Each workspace has its own tiles** (windows shown on all workspaces join
   the current one's). Switching workspaces, tiles slide along as tiles; in
   the overview, a parked window grows out of its edge into the grid and
   shrinks back into its tile when the overview closes.
 - **Tiles follow the screen:** resolution, scale and monitor changes, and
   panels coming or going.
+
+Shaking a window with a few others open stashes them at the sides:
+
+![Notes is shaken; Clocks and Characters stash at the left side and
+Calculator at the right, all of them whole](docs/shake-few.gif)
+
+With more open than can stash whole, they park as tiles instead:
+
+![Seven windows are open; Notes is shaken and the other six park as tiles,
+three at each side; one grows to full size under the
+pointer](docs/shake-many.gif)
 
 ## Gestures
 
@@ -67,8 +86,8 @@ The Super key (Windows / Meta) is the window system's key:
   to undo.
 - **Super + double-click a tile** (or a stash) to unpark it: the window goes
   back to its size and to where it was before it was parked.
-- **Super + double-click the empty desktop** to park every window. Do it
-  again to undo.
+- **Super + double-click the empty desktop** to stash or park every
+  window, as a shake does. Do it again to undo.
 - **Super + drag** moves a window or tile from anywhere inside it.
 
 ## Settings
@@ -92,8 +111,8 @@ In the extension's preferences (the Extensions app, Extension Manager, or
 
 **Stashing:**
 
-- **Stash at:** which screen edges stash windows, as in Glance (none by
-  default). Dragged toward such an edge, a window shrinks once its own edge
+- **Stash at:** which screen edges stash windows, as in Glance (left and
+  right by default). Dragged toward such an edge, a window shrinks once its own edge
   (not the pointer) comes near the screen edge, the closer the smaller.
   Dropped there, it stays where and as small as it is, still usable (a
   stash). Where parking is on at that edge too, dropping it with the
@@ -103,12 +122,12 @@ In the extension's preferences (the Extensions app, Extension Manager, or
   it. Drag a stash back to the middle to give it its full size. Switching
   stashing off at an edge gives its stashes their full size back.
 - **Start shrinking at:** how far from the screen edge the window's edge
-  starts shrinking, in percent of the screen (5-50%, default 25% as in
-  Glance).
+  starts shrinking, in percent of the screen (5-50%, default 5%; Glance's
+  is 25%).
 - **Shrink down to:** the smallest a window gets before the edge zone, in
-  percent of its size (15-90%, default 15% as in Glance); in the edge zone
+  percent of its size (15-90%, default 70%; Glance's is 15%); in the edge zone
   of an edge that parks, it goes on to tile size.
-- **Shake stashes instead of parking:** shaking a window, or
+- **Shake stashes instead of parking** (on by default): shaking a window, or
   Super+double-clicking the desktop, puts the other windows (and the
   stashes already there) in a column at each side stashing is on at,
   beside any tiles, at one common scale, as in Glance, no smaller than
@@ -178,17 +197,18 @@ and log out and back in. To remove it:
 
 ## Differences from Glance
 
-Glance's design, from its `docs/`, is the starting point. By choice, this extension
-has no stashes unless stashing is on at an edge (Glance keeps windows
-dropped before the very edge where and as large as drawn), keeps parked
-apps at their size (Glance lays them out as
-phone-sized squares), shows the whole window in previews, moves neighbouring
-tiles out of a preview's way, centers a Super+double-clicked window
-instead of filling the nearer half of the screen and stashing the rest,
-shrinks windows by the pointer's distance to
-an edge rather than the window's, in narrower zones (Glance: the window's
-edge within 25% of the screen per side; edges with stashing on do that),
-and can park at the top and bottom. Left out: tilted
+Glance's design, from its `docs/`, is the starting point. By choice, this
+extension stashes only at the edges stashing is on at (the sides by
+default; Glance keeps windows dropped before any edge where and as large
+as drawn), starts shrinking a window nearer the edge and shrinks it less
+(by default from its edge within 5% of the screen, down to 70%; Glance:
+25%, down to 15%), parks once the pointer reaches a thin edge zone (at
+edges that only park, it shrinks windows by the pointer's distance to the
+edge too), keeps parked apps at their size (Glance lays them out as
+phone-sized squares), shows the whole window in previews, moves
+neighbouring tiles out of a preview's way, centers a Super+double-clicked
+window instead of filling the nearer half of the screen and stashing the
+rest, and can park at the top and bottom. Left out: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 
@@ -243,6 +263,20 @@ This is a personal project, shared as is. Issues for bugs and ideas are
 welcome, and some may be fixed or built, but there is no promise of support,
 fixes or new features, nor of when they would come. Pull requests may be
 reviewed slowly or not merged.
+
+## Acknowledgements
+
+This extension is built on Scott Jenson's ideas. His
+[Glance](https://github.com/scottjenson/Glance) for KDE Plasma is its
+starting point: the middle of the screen for work, the edges as a shelf,
+windows that shrink toward them and stay usable as stashes and tiles. In
+his talk "Are we really going to use the same Desktop UX forever?" he
+shows a setup like this one, from 29:10:
+
+[![Scott Jenson: Are we really going to use the same Desktop UX forever?
+(video, from 29:10)](https://i.ytimg.com/vi/V7AfAcQwLW0/hqdefault.jpg)](https://www.youtube.com/watch?v=V7AfAcQwLW0&t=1750s)
+
+Many thanks to him for sharing them.
 
 ## License
 
