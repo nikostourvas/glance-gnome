@@ -16,6 +16,9 @@ export const parkBelow = 0.99;
 export const parkingTile = 180;
 // Vertical gap between windows in a parking column.
 export const arrangeGap = 8;
+// A line of tiles too long for its edge shrinks, no smaller than this; then
+// its tiles overlap (see crowdedLine).
+export const crowdedScale = 2 / 3;
 // Glides into place, in milliseconds.
 export const animationTime = 180;
 // Hover previews: a parking tile grows to its app's real size (but no
@@ -140,6 +143,28 @@ export function parkingTileRect(edge, original, center, screen, area) {
     const x = edge === Edge.LEFT ? screen.x : screen.x + screen.width - width;
     const y = clamp(center - height / 2, area.y, Math.max(area.y, area.y + area.height - height));
     return {x, y, width, height};
+}
+
+// A line of tiles of natural `lengths` along it, in `length`: where each
+// starts (from the line's start) and the scale all are drawn at. They are
+// centered, arrangeGap apart, if they fit; else they shrink together until
+// they do, but no smaller than crowdedScale; then they overlap evenly, so
+// the line fills `length` and every tile still shows a part.
+export function crowdedLine(lengths, length) {
+    const n = lengths.length;
+    const gaps = arrangeGap * Math.max(0, n - 1);
+    const sum = lengths.reduce((a, b) => a + b, 0);
+    const scale = sum + gaps <= length ? 1 : Math.max(crowdedScale, (length - gaps) / sum);
+    const used = sum * scale;
+    const gap = n > 1 && used + gaps > length + 0.5 ? (length - used) / (n - 1) : arrangeGap;
+    const span = used + gap * Math.max(0, n - 1);
+    let start = Math.max(0, (length - span) / 2);
+    const starts = lengths.map(l => {
+        const at = start;
+        start += l * scale + gap;
+        return at;
+    });
+    return {scale, starts};
 }
 
 // The center of `r` along a line of tiles at `edge`.

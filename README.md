@@ -31,7 +31,10 @@ Key mechanics:
   closer to the edge the smaller.
 - **Dropping it in the zone parks it** as a 180 px tile. The tiles of each
   edge keep to a centered line, which rearranges itself as windows come
-  and go. Each tile shows its app's icon, as the overview does.
+  and go. A line too long for its edge shrinks its tiles together, down to
+  two thirds of their size, and beyond that overlaps them evenly, so every
+  tile stays on screen with a part showing. Each tile shows its app's
+  icon, as the overview does.
 - **Tiles stay usable.** You can click, type and scroll in them, and their
   menus open. The app keeps its size; it is only drawn small.
 - **Hover over a tile to read it:** it grows in place to the window's full

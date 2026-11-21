@@ -191,6 +191,9 @@ export class ParkedWindows {
         this._set(window, {
             shown: place, original, origin, monitor, edge, stash, restoring: false,
             zoom: place.width / layout.width,
+            // The zoom of a tile in a line that isn't crowded (see
+            // arrangeLine).
+            baseZoom: place.width / layout.width,
             resizeFrom: resize ? {width: frame.width, height: frame.height} : null,
         });
 
@@ -337,12 +340,14 @@ export class ParkedWindows {
 
     // Each edge holds its tiles on a workspace as one line (a column at a
     // side, a row at the top or bottom), centered, ordered by where they are
-    // (an arriving window that lands on another goes after it).
+    // (an arriving window that lands on another goes after it); a line too
+    // long for its edge shrinks, then overlaps (G.crowdedLine).
     arrangeLine(edge, monitor, arriving, workspace = activeWorkspace()) {
         const {pos, size} = G.lineAxis(edge);
-        const bounds = G.lineBounds(edge, screenOf(monitor), workAreaOf(monitor));
+        const screen = screenOf(monitor);
+        const area = workAreaOf(monitor);
+        const bounds = G.lineBounds(edge, screen, area);
         const items = [];
-        let total = 0;
         for (const [window, parked] of this._parked) {
             if (parked.restoring || parked.stash || parked.monitor !== monitor || parked.edge !== edge ||
                 !window.located_on_workspace(workspace))
@@ -350,20 +355,33 @@ export class ParkedWindows {
             let key = parked.shown[pos] + parked.shown[size] / 2;
             if (window === arriving)
                 key += parked.shown[size] / 2;
-            items.push({window, parked, key});
-            total += parked.shown[size] + (items.length > 1 ? G.arrangeGap : 0);
+            // Its size uncrowded (see crowdedLine).
+            const natural = (parked.baseZoom ?? parked.zoom) / parked.zoom;
+            items.push({window, parked, key, width: parked.shown.width * natural, height: parked.shown.height * natural});
         }
         items.sort((a, b) => a.key - b.key);
 
-        let start = Math.max(bounds.start, bounds.start + (bounds.length - total) / 2);
-        for (const {window, parked} of items) {
-            if (Math.abs(parked.shown[pos] - start) > 0.5) {
-                const from = {...displayRect(parked)};
-                parked.shown = {...parked.shown, [pos]: start};
-                this._glide(window, from);
-            }
-            start += parked.shown[size] + G.arrangeGap;
-        }
+        const {scale, starts} = G.crowdedLine(items.map(item => item[size]), bounds.length);
+        items.forEach(({window, parked, width: naturalWidth, height: naturalHeight}, i) => {
+            const width = naturalWidth * scale;
+            const height = naturalHeight * scale;
+            const place = {width, height, [pos]: bounds.start + starts[i]};
+            if (edge === G.Edge.LEFT)
+                place.x = screen.x;
+            else if (edge === G.Edge.RIGHT)
+                place.x = screen.x + screen.width - width;
+            else if (edge === G.Edge.TOP)
+                place.y = area.y;
+            else
+                place.y = area.y + area.height - height;
+            const shown = parked.shown;
+            if (G.near(shown.x, place.x) && G.near(shown.y, place.y) && G.near(shown.width, width))
+                return;
+            const from = {...displayRect(parked)};
+            parked.shown = place;
+            parked.zoom = (parked.baseZoom ?? parked.zoom) * scale;
+            this._glide(window, from);
+        });
     }
 
     // Every line of tiles re-formed (the active workspace's last, so tiles

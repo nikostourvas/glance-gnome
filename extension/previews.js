@@ -69,17 +69,23 @@ export class HoverPreviews {
 
     // The parking tile drawn at (x, y) (where it is headed: home, or moved
     // aside), half the gap around it included so moving along the column
-    // never falls between two.
+    // never falls between two; where tiles overlap (a crowded line), the
+    // one on top.
     _iconAt(x, y) {
         const workspace = global.workspace_manager.get_active_workspace();
+        const found = [];
         for (const [window, parked] of this._parking.entries()) {
             if (!this._parking.isParked(window) || window.minimized || !window.located_on_workspace(workspace))
                 continue;
             const spot = parked.aside ?? parked.shown;
             if (contains({...spot, y: spot.y - G.arrangeGap / 2, height: spot.height + G.arrangeGap}, x, y))
-                return window;
+                found.push(window);
         }
-        return null;
+        if (found.length < 2)
+            return found[0] ?? null;
+        // Within one: those it actually covers first, then the top.
+        const inside = found.filter(w => contains(this._parking.get(w).aside ?? this._parking.get(w).shown, x, y));
+        return global.display.sort_windows_by_stacking(inside.length ? inside : found).at(-1);
     }
 
     // The stash or tile of an X11 app drawn at (x, y), if no other window
