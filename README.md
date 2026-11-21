@@ -152,13 +152,12 @@ and log out and back in. To remove it:
 
 - Dialogs of a parked window open at full size where its (invisible) frame
   is.
-- A menu of a parked window can open in the wrong place if Mutter keeps the
-  window's frame partly off screen.
-- X11 (Xwayland) apps get clicks where their (invisible) full-size window
-  is, not where they are drawn. Their hover previews are always shown at
-  full size, with the window moved there, so they can be used as usual;
-  a click on such a tile itself lands on whatever part of the full-size
-  window is there.
+- A menu of a parked window that is larger than the screen can open in the
+  wrong place (the window's hidden full-size frame can't fit on screen).
+- X11 (Xwayland) apps work in their hover previews as usual. A click on the
+  small tile itself, before the preview opens, lands on the hidden
+  full-size window instead (GNOME sends clicks to X11 apps by where the
+  window really is, not where it is drawn).
 
 ## Differences from Glance
 
