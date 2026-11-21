@@ -84,8 +84,10 @@ In the extension's preferences (the Extensions app, Extension Manager, or
   instead. A dragged window shrinks once its edge (not the pointer) comes
   near an enabled screen edge, the closer the smaller. Dropped there, it
   stays where and as small as it is, still usable (a stash); dropped with
-  the pointer in the edge zone, or once at tile size, it parks. Drag a
-  stash back to the middle to give it its full size. Under it:
+  the pointer in the edge zone, or once at tile size, it parks. Stashes
+  never cover tiles: at an edge with tiles, a stash over their strip slides
+  inward until it clears it. Drag a stash back to the middle to give it its
+  full size. Under it:
   - **Start shrinking at:** how far from the screen edge the window's edge
     starts shrinking, in percent of the screen (5-50%, default 25% as in
     Glance).

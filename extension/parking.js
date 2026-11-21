@@ -209,6 +209,48 @@ export class ParkedWindows {
         this._glide(window, from);
         if (!stash)
             this.arrangeLine(edge, monitor, window, workspaceOf(window));
+        this._clearStashes(monitor, workspaceOf(window));
+    }
+
+    // Stashes on `monitor` and `workspace` that lie over the strip of an
+    // edge that has tiles (a tile's thickness and a gap, as for centering:
+    // G.clearOfTiles) slide inward, gliding, until they clear it, so they
+    // never hide tiles. An edge without tiles keeps no strip.
+    _clearStashes(monitor, workspace) {
+        if (this._clearing)
+            return;
+        const edges = Object.values(G.Edge).filter(e => this.line(e, monitor, workspace).length);
+        if (!edges.length)
+            return;
+        const screen = screenOf(monitor);
+        const area = workAreaOf(monitor);
+        const room = G.clearOfTiles(screen, area, edges);
+        this._clearing = true;
+        try {
+            for (const [window, parked] of [...this._parked]) {
+                if (!parked.stash || parked.restoring || parked.monitor !== monitor ||
+                    !window.located_on_workspace(workspace))
+                    continue;
+                const spot = parked.shown;
+                const height = spot.width * parked.original.height / parked.original.width;
+                // Only off the strips, not into the work area otherwise.
+                const clear = (start, size, low, high) =>
+                    Math.max(low, Math.min(start, high - size));
+                const x = clear(spot.x, spot.width,
+                    edges.includes(G.Edge.LEFT) ? room.x : -Infinity,
+                    edges.includes(G.Edge.RIGHT) ? room.x + room.width : Infinity);
+                const y = clear(spot.y, height,
+                    edges.includes(G.Edge.TOP) ? room.y : -Infinity,
+                    edges.includes(G.Edge.BOTTOM) ? room.y + room.height : Infinity);
+                if (G.near(x, spot.x) && G.near(y, spot.y))
+                    continue;
+                console.debug(`glance: ${window.get_title()}: stash clear of the tiles`);
+                this.park(window, {...spot, x, y}, parked.original, monitor,
+                    {from: displayRect(parked), edge: parked.edge, origin: parked.origin, stash: true});
+            }
+        } finally {
+            this._clearing = false;
+        }
     }
 
     // A window dropped (Glance-style dragging) where it was drawn at
