@@ -11,18 +11,18 @@ full size.
 
 ## How it works
 
-The screen has two kinds of areas, three with Glance-style dragging on:
+The screen has two kinds of areas, three with stashing on:
 
 - **The middle:** windows here are full size, wherever and however large
   they are.
-- **Edge zones:** a thin strip along each enabled edge (left and right by
-  default, 2% of the screen width). A window dragged with the pointer in a
+- **Edge zones:** a thin strip along each edge parking is on at (left and
+  right by default, 2% of the screen width). A window dragged with the pointer in a
   zone shrinks; dropped there, it parks.
 - **Parking:** the tiles themselves, in a column at each side, or a row at
   the top or bottom.
-- **Stash** (only with Glance-style dragging, see Settings): the wider band
-  between the middle and an edge, where windows shrink as they near the
-  edge and stay as small as they are drawn.
+- **Stash** (at edges stashing is on at, off by default, see Settings): the
+  wider band between the middle and an edge, where windows shrink as they
+  near the edge and stay as small as they are drawn.
 
 Key mechanics:
 
@@ -71,46 +71,52 @@ The Super key (Windows / Meta) is the window system's key:
 ## Settings
 
 In the extension's preferences (the Extensions app, Extension Manager, or
-`gnome-extensions prefs glance-gnome@nikostourvas.github.io`). The
-**Settings** tab has:
+`gnome-extensions prefs glance-gnome@nikostourvas.github.io`), in tabs.
 
-- **Parking areas:** which screen edges park windows. The top and bottom
-  rows sit inside the usable area, below the top bar and above any bottom
-  panel. The bottom works best on large screens.
+**Parking:**
+
+- **Park at:** which screen edges park windows (left and right by default).
+  The top and bottom rows sit inside the usable area, below the top bar and
+  above any bottom panel. The bottom works best on large screens.
 - **Edge zone width:** how close to an edge the pointer must come, in
   percent of the screen width (1-20%, default 2%), for a dragged window to
   shrink and park.
-- **Drag and stash as in Glance** (off by default): Glance's own rule
-  instead. A dragged window shrinks once its edge (not the pointer) comes
-  near an enabled screen edge, the closer the smaller. Dropped there, it
-  stays where and as small as it is, still usable (a stash); dropped with
-  the pointer in the edge zone, or once at tile size, it parks. Stashes
-  never cover tiles: at an edge with tiles, a stash over their strip slides
-  inward until it clears it. Drag a stash back to the middle to give it its
-  full size. Under it:
-  - **Start shrinking at:** how far from the screen edge the window's edge
-    starts shrinking, in percent of the screen (5-50%, default 25% as in
-    Glance).
-  - **Shrink down to:** the smallest a window gets before the edge zone, in
-    percent of its size (15-90%, default 15% as in Glance); in the edge
-    zone it goes on to tile size.
-  - **Shake stashes instead of parking:** shaking a window, or
-    Super+double-clicking the desktop, puts the other windows (and the
-    stashes already there) in a column beside the tiles at each side, at
-    one common scale, as in Glance.
-
-  Switching Glance-style dragging off gives stashed windows their full size
-  back.
 - **Tiles in overview and workspace switches** (on by default): keep parked
   windows as tiles in those animations. This changes GNOME's own
   animations, which can change between GNOME releases: each change is only
   made if GNOME's code is as expected and falls back to GNOME's own
   behaviour on any error, but if a GNOME update breaks them, turn this off.
 
-Dialogs, like the settings window itself, don't shrink, park or stash. An
-**About** tab credits Glance and its author. Changes apply at once; tiles at
-an edge that is switched off move to the nearest edge still on, or back to
-full size if none is.
+**Stashing:**
+
+- **Stash at:** which screen edges stash windows, as in Glance (none by
+  default). Dragged toward such an edge, a window shrinks once its own edge
+  (not the pointer) comes near the screen edge, the closer the smaller.
+  Dropped there, it stays where and as small as it is, still usable (a
+  stash). Where parking is on at that edge too, dropping it with the
+  pointer in the edge zone, or once at tile size, parks it; where it isn't,
+  it is stashed even at the very edge. Stashes never cover tiles: at an
+  edge with tiles, a stash over their strip slides inward until it clears
+  it. Drag a stash back to the middle to give it its full size. Switching
+  stashing off at an edge gives its stashes their full size back.
+- **Start shrinking at:** how far from the screen edge the window's edge
+  starts shrinking, in percent of the screen (5-50%, default 25% as in
+  Glance).
+- **Shrink down to:** the smallest a window gets before the edge zone, in
+  percent of its size (15-90%, default 15% as in Glance); in the edge zone
+  of an edge that parks, it goes on to tile size.
+- **Shake stashes instead of parking:** shaking a window, or
+  Super+double-clicking the desktop, puts the other windows (and the
+  stashes already there) in a column at each side stashing is on at,
+  beside any tiles, at one common scale, as in Glance, no smaller than
+  "Shrink down to" (overlapping from top to bottom if they don't fit). (With no edge
+  parking, they are stashed anyway.)
+
+**About:** credits Glance and its author.
+
+Dialogs, like the settings window itself, don't shrink, park or stash.
+Changes apply at once; tiles at an edge parking is switched off at move to
+the nearest edge still on, or back to full size if none is.
 
 ## Status
 
@@ -158,16 +164,17 @@ and log out and back in. To remove it:
   is.
 - A menu of a parked window that is larger than the screen can open in the
   wrong place (the window's hidden full-size frame can't fit on screen).
-- X11 (Xwayland) apps work in their hover previews as usual; their stashes
-  get a hover preview too, at full size over the stash. A click on the
-  small tile or stash itself, before the preview opens, lands on the hidden
-  full-size window instead (GNOME sends clicks to X11 apps by where the
-  window really is, not where it is drawn).
+- X11 (Xwayland) apps get clicks where their hidden full-size window is,
+  not where they are drawn. To make small tiles and stashes of them usable,
+  that hidden window follows the pointer over them, so the point under the
+  pointer is the one drawn there. A click made while the pointer is still
+  moving fast can land a little off, and a window much larger than the
+  screen can't always be moved far enough.
 
 ## Differences from Glance
 
 Glance's design, from its `docs/`, is the starting point. By choice, this extension
-has no stashes unless Glance-style dragging is on (Glance keeps windows
+has no stashes unless stashing is on at an edge (Glance keeps windows
 dropped before the very edge where and as large as drawn), keeps parked
 apps at their size (Glance lays them out as
 phone-sized squares), shows the whole window in previews, moves neighbouring
@@ -175,7 +182,7 @@ tiles out of a preview's way, centers a Super+double-clicked window
 instead of filling the nearer half of the screen and stashing the rest,
 shrinks windows by the pointer's distance to
 an edge rather than the window's, in narrower zones (Glance: the window's
-edge within 25% of the screen per side; Glance-style dragging does that),
+edge within 25% of the screen per side; edges with stashing on do that),
 and can park at the top and bottom. Left out: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.

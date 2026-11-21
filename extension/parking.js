@@ -1,7 +1,7 @@
 // Parked windows: dropped while shrunk, a window becomes a tile against the
 // screen edge it was dragged to, in a column at a side or a row at the top
 // or bottom, still usable, its app at its
-// full size, only drawn small. With Glance-style dragging (a setting, see
+// full size, only drawn small. At an edge with stashing on (a setting, see
 // drag.js), a window dropped short of parking size is stashed instead:
 // drawn where and as large as it was dropped, on no line, still usable.
 // (Glance lays a parking app out as a phone-sized square; here an app keeps
@@ -13,7 +13,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
-import {EDGE_SETTINGS, enabledEdges, glanceDragging} from './config.js';
+import {EDGE_SETTINGS, STASH_SETTINGS, enabledEdges, stashEdges} from './config.js';
 import {Ticker, clearDrawn, forgetDrawn, frameRect, setDrawn} from './draw.js';
 import {TileIcons} from './icons.js';
 
@@ -98,9 +98,10 @@ export class ParkedWindows {
         // _edgesChanged).
         for (const key of EDGE_SETTINGS)
             settings.connectObject(`changed::${key}`, () => this._edgesChanged(), this);
-        // Glance-style dragging switched off: stashes get their full size
+        // Stashing switched off at an edge: its stashes get their full size
         // back.
-        settings.connectObject('changed::glance-dragging', () => this._glanceChanged(), this);
+        for (const key of STASH_SETTINGS)
+            settings.connectObject(`changed::${key}`, () => this._stashEdgesChanged(), this);
     }
 
     destroy() {
@@ -253,7 +254,7 @@ export class ParkedWindows {
         }
     }
 
-    // A window dropped (Glance-style dragging) where it was drawn at
+    // A window dropped (at an edge with stashing on) where it was drawn at
     // `drawn`, in the zone of `edge` but larger than a tile: stashed there.
     stash(window, drawn, original, monitor, edge, origin) {
         this.release(window);
@@ -600,12 +601,11 @@ export class ParkedWindows {
         }
     }
 
-    // Stashes back to full size when Glance-style dragging is switched off.
-    _glanceChanged() {
-        if (glanceDragging(this._settings))
-            return;
+    // Stashes back to full size at edges stashing is switched off at.
+    _stashEdgesChanged() {
+        const edges = stashEdges(this._settings);
         for (const [window, parked] of [...this._parked]) {
-            if (!parked.restoring && parked.stash)
+            if (!parked.restoring && parked.stash && !edges.includes(parked.edge))
                 this._toFullSize(window, parked);
         }
     }

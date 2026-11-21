@@ -68,7 +68,7 @@ export function near(a, b) {
     return Math.abs(a - b) < 0.5;
 }
 
-// Glance-style dragging: the scale at which a window, scaled around the
+// Stashing (Glance's rule): the scale at which a window, scaled around the
 // pointer, has its edge on one side at the point of the curve: full size
 // until that edge enters the edge zone, then falling linearly to minScale
 // at the screen edge. The drawn edge is at d = pointerToScreenEdge -
@@ -80,7 +80,7 @@ export function edgeScale(pointerToScreenEdge, pointerToWindowEdge, zoneWidth, f
     return (floor + k * pointerToScreenEdge) / (1 + k * pointerToWindowEdge);
 }
 
-// Glance-style dragging with settings: by the window's edge (edgeScale)
+// Stashing at an edge that also parks: by the window's edge (edgeScale)
 // within `zoneWidth`, but no smaller than `floor`; then, with the pointer
 // within `strip` of the screen edge, on down to minScale at the edge (from
 // wherever it was as it entered, so nothing jumps).
@@ -169,20 +169,30 @@ export function clearOfTiles(screen, area, edges) {
 // A stash column (Glance's declutter): windows of full sizes `sizes`, top
 // to bottom, at one common scale that fits them into the width of `band`
 // (the stash zone beside the tiles) and, arrangeGap apart, into the work
-// area's height (no larger than full size, no smaller than minScale),
-// centered in both.
-export function stashColumn(sizes, band, area) {
+// area's height, but no larger than full size and no smaller than `floor`
+// (the smallest stash size setting). Centered in both if they fit; else a
+// window wider than the band reaches inward from its outer side (`atLeft`:
+// the band is at the left), and a column taller than the area overlaps
+// evenly from top to bottom, each window showing its top.
+export function stashColumn(sizes, band, area, floor = minScale, atLeft = true) {
     const gaps = arrangeGap * (sizes.length - 1);
     const total = sizes.reduce((sum, size) => sum + size.height, 0);
     const widest = Math.max(...sizes.map(size => size.width));
-    const scale = clamp(Math.min(band.width / widest, (area.height - gaps) / total), minScale, 1);
-    let y = area.y + Math.max(0, (area.height - total * scale - gaps) / 2);
-    return sizes.map(size => {
-        const r = {
-            x: band.x + (band.width - size.width * scale) / 2, y,
-            width: size.width * scale, height: size.height * scale,
-        };
-        y += r.height + arrangeGap;
+    const scale = clamp(Math.min(band.width / widest, (area.height - gaps) / total), floor, 1);
+    const heights = sizes.map(size => size.height * scale);
+    const fits = total * scale + gaps <= area.height;
+    // Overlapping: from the top of the area to its bottom, in even steps.
+    const step = sizes.length > 1
+        ? (area.height - heights[heights.length - 1]) / (sizes.length - 1)
+        : 0;
+    let y = fits ? area.y + (area.height - total * scale - gaps) / 2 : area.y;
+    return sizes.map((size, i) => {
+        const width = size.width * scale;
+        const x = width <= band.width
+            ? band.x + (band.width - width) / 2
+            : atLeft ? band.x : band.x + band.width - width;
+        const r = {x, y, width, height: heights[i]};
+        y += fits ? heights[i] + arrangeGap : step;
         return r;
     });
 }

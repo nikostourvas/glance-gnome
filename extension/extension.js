@@ -20,9 +20,10 @@ import GLib from 'gi://GLib';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {TilingAssistant} from './compat.js';
+import {migrateSettings} from './config.js';
 import {Declutter} from './declutter.js';
 import {WindowDrag} from './drag.js';
-import {Popups} from './draw.js';
+import {CloseAnimations, Popups} from './draw.js';
 import {ShellPatches} from './overview.js';
 import {ParkedWindows} from './parking.js';
 import {HoverPreviews} from './previews.js';
@@ -34,7 +35,9 @@ export default class GlanceExtension extends Extension {
     enable() {
         this._turnOffEdgeTiling();
         this._settings = this.getSettings();
+        migrateSettings(this._settings);
         this._popups = new Popups();
+        this._closeAnimations = new CloseAnimations();
         this._parking = new ParkedWindows(this._settings);
         this._shellPatches = null;
         this._syncShellPatches();
@@ -54,6 +57,8 @@ export default class GlanceExtension extends Extension {
         this._shellPatches?.destroy();
         this._parking.destroy();
         this._popups.destroy();
+        this._closeAnimations.destroy();
+        this._closeAnimations = null;
         this._previews = this._drag = this._tilingAssistant = this._declutter = this._shellPatches = null;
         this._parking = this._popups = null;
         this._settings = null;

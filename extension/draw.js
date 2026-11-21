@@ -8,6 +8,7 @@
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
 import Mtk from 'gi://Mtk';
+import St from 'gi://St';
 
 import * as G from './geometry.js';
 
@@ -128,6 +129,40 @@ export class Popups {
                 forgetDrawn(window);
             }, this);
         follow();
+    }
+}
+
+// GNOME's close animation scales a closing window from where it is to 0.8
+// (1 with reduced motion) around its center: a tile or stash, drawn small,
+// would jump and grow. A window drawn scaled closes from its drawn size
+// instead, to 0.8 of it, around its drawn center.
+export class CloseAnimations {
+    constructor() {
+        // After the shell's own handler (connected at startup), which
+        // starts the animation.
+        global.window_manager.connectObject('destroy', (wm, actor) => this._closing(actor), this);
+    }
+
+    destroy() {
+        global.window_manager.disconnectObject(this);
+    }
+
+    _closing(actor) {
+        const scale = actor.scale_x;
+        const transitions = ['scale-x', 'scale-y'].map(p => actor.get_transition(p)).filter(t => t);
+        if (scale > 0.999 || !transitions.length)
+            return;
+        // The shell moved the pivot to the center: keep the drawing where
+        // it is.
+        const [px, py] = actor.get_pivot_point();
+        const [tx, ty] = actor.get_translation();
+        actor.set_translation(
+            tx - (1 - scale) * px * actor.width,
+            ty - (1 - scale) * py * actor.height,
+            0);
+        const reduced = St.Settings.get().reducedMotion === St.ReducedMotion.REDUCE;
+        for (const transition of transitions)
+            transition.set_to(scale * (reduced ? 1 : 0.8));
     }
 }
 

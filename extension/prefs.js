@@ -1,6 +1,6 @@
-// The settings window: which screen edges windows park at, how wide the
-// edge zones are, and whether windows are dragged as in Glance (see
-// config.js).
+// The settings window, in tabs: where windows park and how close to an edge
+// they must come, where they are stashed (as in Glance) and how they shrink
+// on the way, and credits (see config.js).
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -8,78 +8,56 @@ import Gtk from 'gi://Gtk';
 import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 const EDGES = [
-    ['park-left', 'Left edge', null],
-    ['park-right', 'Right edge', null],
-    ['park-top', 'Top edge', 'Just below the top bar'],
-    ['park-bottom', 'Bottom edge', 'Works best on large screens'],
+    ['left', 'Left edge', null],
+    ['right', 'Right edge', null],
+    ['top', 'Top edge', 'Just below the top bar'],
+    ['bottom', 'Bottom edge', 'Works best on large screens'],
 ];
+
+const DIALOGS = "Dialogs, like this settings window, don't shrink, park or stash.";
 
 export default class GlancePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
-        const page = new Adw.PreferencesPage({title: 'Settings', icon_name: 'preferences-system-symbolic'});
+        window.add(this._parkingPage(settings));
+        window.add(this._stashingPage(settings));
+        window.add(this._aboutPage());
+    }
 
-        const edges = new Adw.PreferencesGroup({
-            title: 'Parking Areas',
-            description: 'Drag a window to an enabled screen edge to park it there as a small tile.',
-        });
-        for (const [key, title, subtitle] of EDGES) {
+    _edgeSwitches(settings, prefix, group) {
+        for (const [edge, title, subtitle] of EDGES) {
             const row = new Adw.SwitchRow({title});
             if (subtitle)
                 row.subtitle = subtitle;
-            settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
-            edges.add(row);
+            settings.bind(`${prefix}-${edge}`, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            group.add(row);
         }
+    }
+
+    _spinRow(settings, key, title, subtitle, lower, upper, step, digits) {
+        const row = new Adw.SpinRow({
+            title, subtitle, digits,
+            adjustment: new Gtk.Adjustment({lower, upper, step_increment: step, page_increment: step * 5}),
+        });
+        settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
+        return row;
+    }
+
+    _parkingPage(settings) {
+        const page = new Adw.PreferencesPage({title: 'Parking', icon_name: 'sidebar-show-symbolic'});
+
+        const edges = new Adw.PreferencesGroup({
+            title: 'Park At',
+            description: 'Drag a window to an edge parking is on at and it becomes a small, live tile ' +
+                'there. ' + DIALOGS,
+        });
+        this._edgeSwitches(settings, 'park', edges);
         page.add(edges);
 
-        const zone = new Adw.PreferencesGroup({
-            title: 'Dragging',
-            description: "Dialogs, like this settings window, don't shrink, park or stash.",
-        });
-        const width = new Adw.SpinRow({
-            title: 'Edge zone width',
-            subtitle: 'How close to an edge the pointer must come for a dragged window to shrink ' +
-                'to tile size and park, in percent of the screen width',
-            adjustment: new Gtk.Adjustment({lower: 1, upper: 20, step_increment: 0.5, page_increment: 1}),
-            digits: 1,
-        });
-        settings.bind('zone-percent', width, 'value', Gio.SettingsBindFlags.DEFAULT);
-        zone.add(width);
-        const glance = new Adw.ExpanderRow({
-            title: 'Drag and stash as in Glance',
-            subtitle: 'As in Glance for KDE: a dragged window starts shrinking farther out, once its ' +
-                'edge comes near an edge. Dropped there, it stays as small as it is (a stash); ' +
-                'dropped in the edge zone, it parks',
-            show_enable_switch: true,
-        });
-        settings.bind('glance-dragging', glance, 'enable-expansion', Gio.SettingsBindFlags.DEFAULT);
-        // Its settings show whenever it is on.
-        settings.bind('glance-dragging', glance, 'expanded', Gio.SettingsBindFlags.GET);
-        const start = new Adw.SpinRow({
-            title: 'Start shrinking at',
-            subtitle: "The window's edge's distance from the screen edge, in percent of the screen " +
-                'width (height for the top and bottom)',
-            adjustment: new Gtk.Adjustment({lower: 5, upper: 50, step_increment: 1, page_increment: 5}),
-            digits: 0,
-        });
-        settings.bind('glance-zone-percent', start, 'value', Gio.SettingsBindFlags.DEFAULT);
-        glance.add_row(start);
-        const smallest = new Adw.SpinRow({
-            title: 'Shrink down to',
-            subtitle: 'The smallest a window gets before the edge zone, in percent of its full size',
-            adjustment: new Gtk.Adjustment({lower: 15, upper: 90, step_increment: 5, page_increment: 10}),
-            digits: 0,
-        });
-        settings.bind('glance-smallest-percent', smallest, 'value', Gio.SettingsBindFlags.DEFAULT);
-        glance.add_row(smallest);
-        const scatter = new Adw.SwitchRow({
-            title: 'Shake stashes instead of parking',
-            subtitle: 'Shaking a window (or Super+double-clicking the desktop) puts the other windows ' +
-                'in a stash beside the tiles at each side, as in Glance, instead of parking them',
-        });
-        settings.bind('scatter-stashes', scatter, 'active', Gio.SettingsBindFlags.DEFAULT);
-        glance.add_row(scatter);
-        zone.add(glance);
+        const zone = new Adw.PreferencesGroup({title: 'Dragging'});
+        zone.add(this._spinRow(settings, 'zone-percent', 'Edge zone width',
+            'How close to an edge the pointer must come for a dragged window to shrink to tile ' +
+            'size and park, in percent of the screen width', 1, 20, 0.5, 1));
         page.add(zone);
 
         const animations = new Adw.PreferencesGroup({title: 'Animations'});
@@ -92,9 +70,51 @@ export default class GlancePreferences extends ExtensionPreferences {
         settings.bind('patch-overview', patch, 'active', Gio.SettingsBindFlags.DEFAULT);
         animations.add(patch);
         page.add(animations);
+        return page;
+    }
 
-        window.add(page);
-        window.add(this._aboutPage());
+    _stashingPage(settings) {
+        const page = new Adw.PreferencesPage({title: 'Stashing', icon_name: 'view-restore-symbolic'});
+
+        const edges = new Adw.PreferencesGroup({
+            title: 'Stash At',
+            description: 'As in Glance for KDE: a window dragged toward an edge stashing is on at ' +
+                'shrinks as its own edge nears the screen edge. Dropped there, it stays as small as it ' +
+                'is, still usable (a stash). Where parking is on too, dropping it in the edge zone ' +
+                'parks it. ' + DIALOGS,
+        });
+        this._edgeSwitches(settings, 'stash', edges);
+        page.add(edges);
+
+        const shrinking = new Adw.PreferencesGroup({title: 'Shrinking'});
+        shrinking.add(this._spinRow(settings, 'glance-zone-percent', 'Start shrinking at',
+            "The window's edge's distance from the screen edge, in percent of the screen width " +
+            '(height for the top and bottom)', 5, 50, 1, 0));
+        shrinking.add(this._spinRow(settings, 'glance-smallest-percent', 'Shrink down to',
+            'The smallest a window gets before the edge zone, in percent of its full size',
+            15, 90, 5, 0));
+        page.add(shrinking);
+
+        const shaking = new Adw.PreferencesGroup({title: 'Shaking'});
+        const scatter = new Adw.SwitchRow({
+            title: 'Shake stashes instead of parking',
+            subtitle: 'Shaking a window (or Super+double-clicking the desktop) puts the other windows ' +
+                'in a stash at each side stashing is on at, beside any tiles, as in Glance, instead ' +
+                'of parking them',
+        });
+        settings.bind('scatter-stashes', scatter, 'active', Gio.SettingsBindFlags.DEFAULT);
+        shaking.add(scatter);
+        page.add(shaking);
+
+        // The rest only matters with stashing on somewhere.
+        const sync = () => {
+            const on = EDGES.some(([edge]) => settings.get_boolean(`stash-${edge}`));
+            shrinking.sensitive = shaking.sensitive = on;
+        };
+        for (const [edge] of EDGES)
+            settings.connect(`changed::stash-${edge}`, sync);
+        sync();
+        return page;
     }
 
     // Credit to Glance, which inspired this extension.

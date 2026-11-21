@@ -28,25 +28,42 @@
       <summary>Edge zone width, in percent of the screen width</summary>
       <description>How close to an enabled screen edge the pointer must come for a dragged window to shrink, and to park when dropped.</description>
     </key>
+    <key name="stash-left" type="b">
+      <default>false</default>
+      <summary>Stash windows at the left screen edge</summary>
+      <description>A window dragged toward the edge shrinks once its own edge comes within glance-zone-percent of it, down to glance-smallest-percent, as in Glance for KDE. Dropped there it stays as small as it is drawn (a stash); where parking is on too, dropped with the pointer in the edge zone (zone-percent), or at tile size, it parks.</description>
+    </key>
+    <key name="stash-right" type="b">
+      <default>false</default>
+      <summary>Stash windows at the right screen edge</summary>
+    </key>
+    <key name="stash-top" type="b">
+      <default>false</default>
+      <summary>Stash windows at the top screen edge</summary>
+    </key>
+    <key name="stash-bottom" type="b">
+      <default>false</default>
+      <summary>Stash windows at the bottom screen edge</summary>
+    </key>
     <key name="glance-dragging" type="b">
       <default>false</default>
-      <summary>Drag and stash windows as in Glance for KDE</summary>
-      <description>A dragged window shrinks once its edge comes within glance-zone-percent of an enabled edge, down to glance-smallest-percent. Dropped there it stays as small as it is drawn (a stash); dropped with the pointer in the edge zone (zone-percent), or at tile size, it parks.</description>
+      <summary>Obsolete: stashing at every parking edge</summary>
+      <description>Replaced by stash-left, stash-right, stash-top and stash-bottom; turned into them once, then reset.</description>
     </key>
     <key name="glance-zone-percent" type="d">
       <range min="5" max="50"/>
       <default>25</default>
-      <summary>With Glance-style dragging: where shrinking starts, in percent of the screen width (height for the top and bottom) from an edge</summary>
+      <summary>Stashing: where shrinking starts, in percent of the screen width (height for the top and bottom) from an edge</summary>
     </key>
     <key name="scatter-stashes" type="b">
       <default>false</default>
-      <summary>With Glance-style dragging: shaking a window (and Super+double-clicking the desktop) stashes the other windows instead of parking them</summary>
-      <description>As in Glance: they go into a column beside the tiles at each side, at one common scale.</description>
+      <summary>Stashing: shaking a window (and Super+double-clicking the desktop) stashes the other windows instead of parking them</summary>
+      <description>As in Glance: they go into a column at each side where stashing is on, beside its tiles, at one common scale.</description>
     </key>
     <key name="glance-smallest-percent" type="d">
       <range min="15" max="90"/>
       <default>15</default>
-      <summary>With Glance-style dragging: the smallest a dragged window gets before the edge zone, in percent of its full size</summary>
+      <summary>Stashing: the smallest a dragged window gets before the edge zone, in percent of its full size</summary>
     </key>
   </schema>
 </schemalist>

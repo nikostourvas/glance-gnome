@@ -19,7 +19,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
-import {enabledEdges, glanceZoneFraction, scatterToStashes} from './config.js';
+import {enabledEdges, glanceSmallest, glanceZoneFraction, scatterStashEdges} from './config.js';
 import {clearDrawn, frameRect} from './draw.js';
 import {screenOf, workAreaOf} from './parking.js';
 
@@ -237,8 +237,9 @@ export class Declutter {
     }
 
     // Every window on `monitor` but `except`, stashes too, is parked, the
-    // parking columns balanced; or, with the setting (scatter-stashes), they
-    // are stashed (see _stashAll).
+    // parking columns balanced; or, with the setting (scatter-stashes) or no
+    // edge parking, they are stashed at the sides stashing is on at (see
+    // _stashAll).
     async _scatter(except, monitor) {
         const movers = this._windows(monitor).filter(w => w !== except && !this._parking.isParked(w));
         if (!movers.length)
@@ -252,12 +253,13 @@ export class Declutter {
         // The side edges if any is on, else the top and bottom. With two,
         // the leftmost (topmost) `toFirst` movers go to the first, the rest
         // to the other, so both end up with about as many tiles.
-        const enabled = enabledEdges(this._settings);
-        let edges = [G.Edge.LEFT, G.Edge.RIGHT].filter(e => enabled.includes(e));
-        if (edges.length && scatterToStashes(this._settings)) {
-            this._stashAll(movers, edges, monitor);
+        const stashAt = scatterStashEdges(this._settings);
+        if (stashAt.length) {
+            this._stashAll(movers, stashAt, monitor);
             return;
         }
+        const enabled = enabledEdges(this._settings);
+        let edges = [G.Edge.LEFT, G.Edge.RIGHT].filter(e => enabled.includes(e));
         if (!edges.length)
             edges = [G.Edge.TOP, G.Edge.BOTTOM].filter(e => enabled.includes(e));
         if (!edges.length)
@@ -293,27 +295,29 @@ export class Declutter {
         const screen = screenOf(monitor);
         const area = workAreaOf(monitor);
         const zone = screen.width * glanceZoneFraction(this._settings);
-        const tiles = G.parkingTile + G.arrangeGap;
         const columns = [all.slice(0, toFirst), all.slice(toFirst)];
         edges.forEach((edge, i) => {
             const column = columns[i];
             if (!column.length)
                 return;
+            // Beside the tiles, if that side has any.
+            const tiles = this._parking.line(edge, monitor).length ? G.parkingTile + G.arrangeGap : 0;
             const width = Math.max(zone - tiles, G.parkingTile);
             const band = {
                 x: edge === G.Edge.LEFT ? screen.x + tiles : screen.x + screen.width - tiles - width,
                 width,
             };
             const sizes = column.map(w => this._parking.get(w)?.original ?? frameRect(w));
-            G.stashColumn(sizes, band, area).forEach((place, j) => {
-                const window = column[j];
-                const parked = this._parking.get(window);
-                const origin = parked && !parked.restoring ? parked.origin : frameRect(window);
-                const from = this._parking.drawnRect(window);
-                this._parking.release(window);
-                this._parking.park(window, place, {width: sizes[j].width, height: sizes[j].height}, monitor,
-                    {from, edge, origin, stash: true});
-            });
+            G.stashColumn(sizes, band, area, glanceSmallest(this._settings), edge === G.Edge.LEFT)
+                .forEach((place, j) => {
+                    const window = column[j];
+                    const parked = this._parking.get(window);
+                    const origin = parked && !parked.restoring ? parked.origin : frameRect(window);
+                    const from = this._parking.drawnRect(window);
+                    this._parking.release(window);
+                    this._parking.park(window, place, {width: sizes[j].width, height: sizes[j].height},
+                        monitor, {from, edge, origin, stash: true});
+                });
         });
     }
 
