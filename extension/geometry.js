@@ -173,7 +173,8 @@ export function clearOfTiles(screen, area, edges) {
 // (the smallest stash size setting). Centered in both if they fit; else a
 // window wider than the band reaches inward from its outer side (`atLeft`:
 // the band is at the left), and a column taller than the area overlaps
-// evenly from top to bottom, each window showing its top.
+// evenly from top to bottom, each window showing its top. Returns the
+// places and whether they fit (no overlapping).
 export function stashColumn(sizes, band, area, floor = minScale, atLeft = true) {
     const gaps = arrangeGap * (sizes.length - 1);
     const total = sizes.reduce((sum, size) => sum + size.height, 0);
@@ -186,7 +187,7 @@ export function stashColumn(sizes, band, area, floor = minScale, atLeft = true) 
         ? (area.height - heights[heights.length - 1]) / (sizes.length - 1)
         : 0;
     let y = fits ? area.y + (area.height - total * scale - gaps) / 2 : area.y;
-    return sizes.map((size, i) => {
+    const places = sizes.map((size, i) => {
         const width = size.width * scale;
         const x = width <= band.width
             ? band.x + (band.width - width) / 2
@@ -195,6 +196,7 @@ export function stashColumn(sizes, band, area, floor = minScale, atLeft = true) 
         y += fits ? heights[i] + arrangeGap : step;
         return r;
     });
+    return {places, fits};
 }
 
 function overlaps(a, b) {

@@ -109,8 +109,9 @@ In the extension's preferences (the Extensions app, Extension Manager, or
   Super+double-clicking the desktop, puts the other windows (and the
   stashes already there) in a column at each side stashing is on at,
   beside any tiles, at one common scale, as in Glance, no smaller than
-  "Shrink down to" (overlapping from top to bottom if they don't fit). (With no edge
-  parking, they are stashed anyway.)
+  "Shrink down to". Only if they all show whole that way: else they are
+  parked (or, with no edge parking, stashed anyway, overlapping from top
+  to bottom).
 
 **About:** credits Glance and its author.
 
