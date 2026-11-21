@@ -21,12 +21,18 @@ Glance](#differences-from-glance)).
   live and usable: clicks, typing, scrolling and menus work. The app keeps
   its size; it is only drawn small. Each tile shows its app's icon, as the
   overview does.
+- **Glance-style dragging and stashes** (a setting, off by default): as in
+  Glance for KDE, a dragged window shrinks once its edge comes within a
+  quarter of the screen of an enabled edge, the closer the smaller. Drop it
+  there and it stays where and as small as it is, still usable (a stash);
+  drop it against the edge at tile size and it parks. Drag a stash out of
+  the zone to give it its full size back.
 - **Hover previews.** Rest the pointer on a tile and it grows in place to
   the window's full size (at most 60% of the screen wide; X11 apps: see
   Known limitations). The other tiles
   in its line move out of the way, so the whole preview can be used. Move
   onto another tile to switch to it; leave and it shrinks back.
-- **Unparking.** Super+double-click a tile and the window goes back to its
+- **Unparking.** Super+double-click a tile (or stash) and the window goes back to its
   size and to where it was before it was parked. Or drag a tile back into
   the middle of the screen: the window gets its size back where it is
   dropped. Tiles are easiest to drag with Super+drag (from anywhere in the
@@ -90,6 +96,9 @@ In the extension's preferences (Extensions app, Extension Manager, or
 - **Edge zone width:** how close to an edge the pointer must come, in
   percent of the screen width (1-20%), for a dragged window to shrink and
   park.
+- **Drag and stash as in Glance:** Glance's zones and stashes instead (see
+  above); the edge zone width isn't used then. Switching it off gives
+  stashed windows their full size back.
 - **Tiles in overview and workspace switches:** keep parked windows as
   tiles in those animations (on by default; see above).
 
@@ -123,15 +132,16 @@ nearest edge still on, or back to full size if none is.
 ## Differences from Glance
 
 Glance's design, from its `docs/`, is the basis. By choice, this extension
-has no stashes (Glance keeps windows dropped before the very edge where and
-as large as drawn), keeps parked apps at their size (Glance lays them out as
+has no stashes unless Glance-style dragging is on (Glance keeps windows
+dropped before the very edge where and as large as drawn), keeps parked
+apps at their size (Glance lays them out as
 phone-sized squares), shows the whole window in previews, moves neighbouring
 tiles out of a preview's way, centers a Super+double-clicked window
 instead of filling the nearer half of the screen and stashing the rest,
 shrinks windows by the pointer's distance to
 an edge rather than the window's, in narrower zones (Glance: the window's
-edge within 25% of the screen per side), and can park at the top and
-bottom. Not ported: tilted
+edge within 25% of the screen per side; Glance-style dragging does that),
+and can park at the top and bottom. Not ported: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 

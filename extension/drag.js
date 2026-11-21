@@ -5,7 +5,10 @@
 // and bottom, the work area's: below the top bar, above any bottom panel).
 // So a window of any size can be placed anywhere as long as the pointer
 // stays out of the zones. Dropped while shrunk it is parked, a tile at that
-// edge; dropped elsewhere it gets its full size back. Where Tiling
+// edge; dropped elsewhere it gets its full size back. With Glance-style
+// dragging (a setting), the zones are Glance's, measured from the window's
+// edge (G.edgeScale), and a window dropped in one short of parking size is
+// stashed: it stays where and as large as it is drawn. Where Tiling
 // Assistant snaps (the pointer at an edge), it does instead (see
 // compat.js). Also: a Super+click (a Mutter move that never moved) and
 // shaking go to Declutter. Glance's kwin/drag.cpp.
@@ -15,7 +18,7 @@ import Meta from 'gi://Meta';
 import St from 'gi://St';
 
 import * as G from './geometry.js';
-import {enabledEdges, zoneFraction} from './config.js';
+import {enabledEdges, glanceDragging, zoneFraction} from './config.js';
 import {superHeld} from './declutter.js';
 import {Ticker, clearDrawn, frameRect, setDrawn} from './draw.js';
 import {workAreaOf} from './parking.js';
@@ -105,25 +108,35 @@ export class WindowDrag {
         const screen = G.rect(global.display.get_monitor_geometry(drag.monitor));
         const area = workAreaOf(drag.monitor);
         const zone = screen.width * zoneFraction(this._settings);
+        drag.glance = glanceDragging(this._settings);
         const frame = frameRect(window);
         // A window that wasn't parked is at its own size, whatever the app
         // or Mutter (unmaximizing it) makes that during the drag.
         if (drag.attached)
             drag.original = {width: frame.width, height: frame.height};
         const {original} = drag;
-        // From the pointer to each enabled screen edge; the edge it is
-        // nearest within a zone is where it parks.
+        // From the pointer to each enabled screen edge (and, for
+        // Glance-style dragging, to the window's edge on that side, at full
+        // size); the edge whose rule shrinks it most is where it parks.
         const toScreen = {
             [G.Edge.LEFT]: px - screen.x,
             [G.Edge.RIGHT]: screen.x + screen.width - px,
             [G.Edge.TOP]: Math.max(0, py - area.y),
             [G.Edge.BOTTOM]: Math.max(0, area.y + area.height - py),
         };
+        const toWindow = {
+            [G.Edge.LEFT]: drag.attached ? px - frame.x : drag.gx * original.width,
+            [G.Edge.RIGHT]: drag.attached ? frame.x + frame.width - px : (1 - drag.gx) * original.width,
+            [G.Edge.TOP]: drag.attached ? py - frame.y : drag.gy * original.height,
+            [G.Edge.BOTTOM]: drag.attached ? frame.y + frame.height - py : (1 - drag.gy) * original.height,
+        };
         let edge = null;
         let rule = 1;
         drag.snapping = this._tilingAssistant.snapsAt(px, py, area);
         for (const e of drag.snapping ? [] : enabledEdges(this._settings)) {
-            const scale = G.pointerScale(toScreen[e], zone);
+            const scale = drag.glance
+                ? G.edgeScale(toScreen[e], toWindow[e], (G.isRow(e) ? screen.height : screen.width) * G.glanceZone)
+                : G.pointerScale(toScreen[e], zone);
             if (scale < rule) {
                 edge = e;
                 rule = scale;
@@ -201,7 +214,9 @@ export class WindowDrag {
             return;
 
         const {original} = drag;
-        if (drag.total < G.parkBelow) {
+        if (drag.total < G.parkBelow && drag.glance && drag.total > G.parkingScale(original)) {
+            this._parking.stash(window, drag.drawn, original, drag.monitor, drag.edge, drag.origin);
+        } else if (drag.total < G.parkBelow) {
             this._parking.drop(window, drag.drawn, original, drag.monitor, drag.edge, drag.origin);
         } else if (drag.snapping) {
             // Tiling Assistant places it.

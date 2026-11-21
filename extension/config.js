@@ -21,3 +21,10 @@ export function enabledEdges(settings) {
 export function zoneFraction(settings) {
     return settings.get_double('zone-percent') / 100;
 }
+
+// Whether windows are dragged as in Glance for KDE: shrinking once their
+// edge is within glanceZone of a screen edge, and stashed where dropped
+// short of parking size (see drag.js).
+export function glanceDragging(settings) {
+    return settings.get_boolean('glance-dragging');
+}

@@ -28,5 +28,10 @@
       <summary>Edge zone width, in percent of the screen width</summary>
       <description>How close to an enabled screen edge the pointer must come for a dragged window to shrink, and to park when dropped.</description>
     </key>
+    <key name="glance-dragging" type="b">
+      <default>false</default>
+      <summary>Drag and stash windows as in Glance for KDE</summary>
+      <description>A dragged window shrinks once its edge comes within a quarter of the screen of an enabled edge. Dropped there it stays as small as it is drawn (a stash); dropped at tile size, against the edge, it parks. The edge zone width isn't used then.</description>
+    </key>
   </schema>
 </schemalist>

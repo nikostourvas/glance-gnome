@@ -1,5 +1,6 @@
-// The settings window: which screen edges windows park at, and how wide the
-// edge zones are (see config.js).
+// The settings window: which screen edges windows park at, how wide the
+// edge zones are, and whether windows are dragged as in Glance (see
+// config.js).
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
@@ -31,7 +32,7 @@ export default class GlancePreferences extends ExtensionPreferences {
         }
         page.add(edges);
 
-        const zone = new Adw.PreferencesGroup({title: 'Edge Zone'});
+        const zone = new Adw.PreferencesGroup({title: 'Dragging'});
         const width = new Adw.SpinRow({
             title: 'Edge zone width',
             subtitle: 'How close to an edge the pointer must come for a dragged window to shrink ' +
@@ -40,7 +41,17 @@ export default class GlancePreferences extends ExtensionPreferences {
             digits: 1,
         });
         settings.bind('zone-percent', width, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('glance-dragging', width, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.INVERT_BOOLEAN);
         zone.add(width);
+        const glance = new Adw.SwitchRow({
+            title: 'Drag and stash as in Glance',
+            subtitle: 'As in Glance for KDE: a dragged window shrinks once its edge comes within a ' +
+                'quarter of the screen of an edge. Dropped there, it stays as small as it is (a ' +
+                'stash); dropped against the edge at tile size, it parks',
+        });
+        settings.bind('glance-dragging', glance, 'active', Gio.SettingsBindFlags.DEFAULT);
+        zone.add(glance);
         page.add(zone);
 
         const animations = new Adw.PreferencesGroup({title: 'Animations'});

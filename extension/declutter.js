@@ -1,4 +1,4 @@
-// Declutter, Super+double-click: on a tile, it is unparked (see
+// Declutter, Super+double-click: on a tile or stash, it is unparked (see
 // ParkedWindows.unpark); on another window, it moves to the middle of the
 // screen (at its size, smaller only if it doesn't fit) and the windows in
 // its way are pushed aside, left or right of it, at their size, always clear
@@ -124,17 +124,17 @@ export class Declutter {
         }
     }
 
-    // On a tile: unparks it (back to its size and place). Else undoes the
-    // last declutter if it was for the same target and the target is still
-    // where it put it, or declutters.
+    // On a tile or stash: unparks it (back to its size and place). Else
+    // undoes the last declutter if it was for the same target and the target
+    // is still where it put it, or declutters.
     _toggle(target, x, y) {
-        if (target && this._parking.isParked(target)) {
+        if (target && this._held(target)) {
             this._parking.unpark(target);
             return;
         }
         const last = this._last;
         const again = last && (target
-            ? last.target === target && !this._parking.isParked(target) && last.center &&
+            ? last.target === target && !this._held(target) && last.center &&
                 isAt(frameRect(target), last.center)
             : last.desktop);
         if (again) {
@@ -160,9 +160,10 @@ export class Declutter {
     // `target` to the middle of the work area, at its size (smaller only if
     // it doesn't fit), and the windows in its way pushed aside, gliding
     // there, never over the enabled edges' tiles (G.clearOfTiles), and so
-    // that all of them still show if they can (G.placeAround).
+    // that all of them still show if they can (G.placeAround). Tiles and
+    // stashes stay.
     async _center(target, monitor, layout) {
-        const others = this._windows(monitor).filter(w => w !== target && !this._parking.isParked(w));
+        const others = this._windows(monitor).filter(w => w !== target && !this._held(w));
         await this._unmaximize([target, ...others]);
         if (this._destroyed || this._last !== layout)
             return;
@@ -222,10 +223,15 @@ export class Declutter {
             .filter(w => manageable(w) && this._parking.monitorOf(w) === monitor);
     }
 
-    // Every window on `monitor` but `except` is parked, the parking
-    // columns balanced.
+    // Whether `window` is a tile or a stash.
+    _held(window) {
+        return this._parking.isParked(window) || this._parking.isStashed(window);
+    }
+
+    // Every window on `monitor` but `except` (and stashes) is parked, the
+    // parking columns balanced.
     async _scatter(except, monitor) {
-        const movers = this._windows(monitor).filter(w => w !== except && !this._parking.isParked(w));
+        const movers = this._windows(monitor).filter(w => w !== except && !this._held(w));
         if (!movers.length)
             return;
 
@@ -276,7 +282,7 @@ export class Declutter {
                     continue; // untouched
                 this._parking.release(window);
                 this._parking.park(window, parked.shown, parked.original, parked.monitor,
-                    {from, edge: parked.edge, origin: parked.origin});
+                    {from, edge: parked.edge, origin: parked.origin, stash: parked.stash});
             } else if (maximized) {
                 this._parking.release(window);
                 clearDrawn(window);

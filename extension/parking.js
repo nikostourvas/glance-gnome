@@ -1,18 +1,19 @@
 // Parked windows: dropped while shrunk, a window becomes a tile against the
 // screen edge it was dragged to, in a column at a side or a row at the top
 // or bottom, still usable, its app at its
-// full size, only drawn small. (Glance also has stashes, windows dropped
-// before the very edge staying where and as large as drawn, and lays a
-// parking app out as a phone-sized square; here an app keeps its size, so
-// its hover preview can show it whole.) Glance's kwin/parked.cpp and
-// docs/dragging-and-parking.md.
+// full size, only drawn small. With Glance-style dragging (a setting, see
+// drag.js), a window dropped short of parking size is stashed instead:
+// drawn where and as large as it was dropped, on no line, still usable.
+// (Glance lays a parking app out as a phone-sized square; here an app keeps
+// its size, so its hover preview can show it whole.) Glance's
+// kwin/parked.cpp and docs/dragging-and-parking.md.
 
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as G from './geometry.js';
-import {EDGE_SETTINGS, enabledEdges} from './config.js';
+import {EDGE_SETTINGS, enabledEdges, glanceDragging} from './config.js';
 import {Ticker, clearDrawn, forgetDrawn, frameRect, setDrawn} from './draw.js';
 import {TileIcons} from './icons.js';
 
@@ -60,7 +61,8 @@ export class ParkedWindows {
     constructor(settings) {
         this._settings = settings;
         // Per window: shown (where it is drawn, its frame's width fitted
-        // into it: its home spot), preview (drawn there instead while
+        // into it: its home spot), stash (a stash, not a tile), preview
+        // (drawn there instead while
         // hovered, see previews.js), aside (drawn there instead while a
         // neighbour is previewed), original (full size), origin (where it
         // was before it was parked, or null), monitor, edge (a G.Edge), zoom
@@ -96,6 +98,9 @@ export class ParkedWindows {
         // _edgesChanged).
         for (const key of EDGE_SETTINGS)
             settings.connectObject(`changed::${key}`, () => this._edgesChanged(), this);
+        // Glance-style dragging switched off: stashes get their full size
+        // back.
+        settings.connectObject('changed::glance-dragging', () => this._glanceChanged(), this);
     }
 
     destroy() {
@@ -141,7 +146,13 @@ export class ParkedWindows {
     // Whether a window is a tile (not going back to full size).
     isParked(window) {
         const parked = this._parked.get(window);
-        return !!parked && !parked.restoring;
+        return !!parked && !parked.restoring && !parked.stash;
+    }
+
+    // Whether a window is a stash (not going back to full size).
+    isStashed(window) {
+        const parked = this._parked.get(window);
+        return !!parked && !parked.restoring && !!parked.stash;
     }
 
     // A window dropped (by a drag) where it was drawn at `drawn`, near
@@ -150,34 +161,34 @@ export class ParkedWindows {
         this.toParking(window, edge, monitor, {from: drawn, original, center: G.lineCenter(edge, drawn), origin});
     }
 
-    // A window (parked or not) to the tiles at `edge`, keeping its place
-    // along it (or `center`). Its `origin` (see park) is where it is now if
-    // not parked yet.
+    // A window (parked, stashed or not) to the tiles at `edge`, keeping its
+    // place along it (or `center`). Its `origin` (see park) is where it is
+    // now if neither yet.
     toParking(window, edge, monitor, {from, original, center, origin} = {}) {
         const parked = this._parked.get(window);
-        const isParked = parked && !parked.restoring;
+        const held = parked && !parked.restoring;
         const frame = frameRect(window);
         from ??= this.drawnRect(window);
-        original ??= isParked ? parked.original : {width: frame.width, height: frame.height};
-        center ??= G.lineCenter(edge, isParked ? parked.shown : frame);
+        original ??= held ? parked.original : {width: frame.width, height: frame.height};
+        center ??= G.lineCenter(edge, held ? parked.shown : frame);
         if (origin === undefined)
-            origin = isParked ? parked.origin : frame;
+            origin = held ? parked.origin : frame;
         const place = G.parkingTileRect(edge, original, center, screenOf(monitor), workAreaOf(monitor));
         this.release(window);
         this.park(window, place, original, monitor, {from, edge, origin});
     }
 
     // Parks a window drawn at `place` at `edge` (gliding there from `from`),
-    // its app at its full size `original`, and closes up its line of tiles.
-    // `origin` is where it was before it was parked (null: unknown), for
-    // unpark.
-    park(window, place, original, monitor, {from = place, edge, origin = null}) {
+    // its app at its full size `original`, and closes up its line of tiles;
+    // or, with `stash`, stashes it there. `origin` is where it was before it
+    // was parked (null: unknown), for unpark.
+    park(window, place, original, monitor, {from = place, edge, origin = null, stash = false}) {
         const screen = screenOf(monitor);
         const layout = original;
         const frame = frameRect(window);
         const resize = !G.near(layout.width, frame.width) || !G.near(layout.height, frame.height);
         this._set(window, {
-            shown: place, original, origin, monitor, edge, restoring: false,
+            shown: place, original, origin, monitor, edge, stash, restoring: false,
             zoom: place.width / layout.width,
             resizeFrom: resize ? {width: frame.width, height: frame.height} : null,
         });
@@ -196,7 +207,15 @@ export class ParkedWindows {
             window.move_frame(true, x, y);
         }
         this._glide(window, from);
-        this.arrangeLine(edge, monitor, window, workspaceOf(window));
+        if (!stash)
+            this.arrangeLine(edge, monitor, window, workspaceOf(window));
+    }
+
+    // A window dropped (Glance-style dragging) where it was drawn at
+    // `drawn`, in the zone of `edge` but larger than a tile: stashed there.
+    stash(window, drawn, original, monitor, edge, origin) {
+        this.release(window);
+        this.park(window, drawn, original, monitor, {edge, origin, stash: true});
     }
 
     // Back to full size `original` at `target`, drawn there (scaled) until
@@ -248,8 +267,8 @@ export class ParkedWindows {
     // default), in order along it by home spot.
     line(edge, monitor, workspace = activeWorkspace()) {
         const {pos} = G.lineAxis(edge);
-        return [...this._parked].filter(([w, p]) => !p.restoring && p.monitor === monitor && p.edge === edge &&
-                w.located_on_workspace(workspace))
+        return [...this._parked].filter(([w, p]) => !p.restoring && !p.stash && p.monitor === monitor &&
+                p.edge === edge && w.located_on_workspace(workspace))
             .sort(([, a], [, b]) => a.shown[pos] - b.shown[pos])
             .map(([w]) => w);
     }
@@ -266,7 +285,7 @@ export class ParkedWindows {
         const parked = this._parked.get(window);
         if (!parked)
             return;
-        const wasParked = !parked.restoring;
+        const wasParked = !parked.restoring && !parked.stash;
         const workspace = workspaceOf(window);
         this._forget(window);
         if (wasParked)
@@ -282,7 +301,7 @@ export class ParkedWindows {
         const items = [];
         let total = 0;
         for (const [window, parked] of this._parked) {
-            if (parked.restoring || parked.monitor !== monitor || parked.edge !== edge ||
+            if (parked.restoring || parked.stash || parked.monitor !== monitor || parked.edge !== edge ||
                 !window.located_on_workspace(workspace))
                 continue;
             let key = parked.shown[pos] + parked.shown[size] / 2;
@@ -399,7 +418,7 @@ export class ParkedWindows {
         const display = displayRect(parked);
         const scale = display.width / frame.width;
         setDrawn(window, display.x, display.y, scale);
-        this._icons.update(window, display.x, display.y, scale, !parked.restoring && !parked.preview);
+        this._icons.update(window, display.x, display.y, scale, !parked.restoring && !parked.stash && !parked.preview);
     }
 
     // Once the app has its size (or the nearest it allows: it may have a
@@ -419,6 +438,11 @@ export class ParkedWindows {
         const spot = parked.shown;
         if (G.near(width, spot.width) && G.near(height, spot.height))
             return;
+        if (parked.stash) {
+            // A stash keeps its top-left.
+            parked.shown = {...spot, width, height};
+            return;
+        }
         const screen = screenOf(parked.monitor);
         const area = workAreaOf(parked.monitor);
         let x, y;
@@ -445,16 +469,29 @@ export class ParkedWindows {
 
     // Every tile back at its edge on the monitor its window is on now (the
     // primary one if that is gone), each line in the same order as before,
-    // re-formed; previews close.
+    // re-formed; previews close. Stashes stay as they are, moved onto that
+    // monitor's screen if they are off it.
     _relayout() {
         const lines = new Map();
         const nMonitors = global.display.get_n_monitors();
-        for (const [window, parked] of this._parked) {
+        for (const [window, parked] of [...this._parked]) {
             if (parked.restoring)
                 continue;
             let monitor = window.get_monitor();
             if (monitor < 0 || monitor >= nMonitors)
                 monitor = global.display.get_primary_monitor();
+            if (parked.stash) {
+                const screen = screenOf(monitor);
+                const spot = parked.shown;
+                const place = {
+                    ...spot,
+                    x: spot.x + G.shiftInto(spot.x, spot.width, screen.x, screen.width),
+                    y: spot.y + G.shiftInto(spot.y, spot.height, screen.y, screen.height),
+                };
+                this.park(window, place, parked.original, monitor,
+                    {from: displayRect(parked), edge: parked.edge, origin: parked.origin, stash: true});
+                continue;
+            }
             const key = `${monitor}:${parked.edge}:${window.get_workspace()?.index() ?? 'all'}`;
             if (!lines.has(key))
                 lines.set(key, []);
@@ -476,9 +513,9 @@ export class ParkedWindows {
         this.arrangeAll();
     }
 
-    // A tile back to its size and to where it was before it was parked
-    // (centered if that isn't known), gliding there (Super+double-click, see
-    // Declutter).
+    // A tile or stash back to its size and to where it was before it was
+    // parked (centered if that isn't known), gliding there
+    // (Super+double-click, see Declutter).
     unpark(window) {
         const parked = this._parked.get(window);
         if (!parked || parked.restoring)
@@ -497,22 +534,17 @@ export class ParkedWindows {
     }
 
     // Tiles at an edge switched off go to the nearest edge still on, or, if
-    // none is, back to full size.
+    // none is, back to full size. (Stashes stay.)
     _edgesChanged() {
         const edges = enabledEdges(this._settings);
         for (const [window, parked] of [...this._parked]) {
-            if (parked.restoring || edges.includes(parked.edge))
+            if (parked.restoring || parked.stash || edges.includes(parked.edge))
                 continue;
             const screen = screenOf(parked.monitor);
             const area = workAreaOf(parked.monitor);
             const center = {x: parked.shown.x + parked.shown.width / 2, y: parked.shown.y + parked.shown.height / 2};
             if (!edges.length) {
-                const target = G.keptIn({
-                    x: center.x - parked.original.width / 2, y: center.y - parked.original.height / 2,
-                    ...parked.original,
-                }, area);
-                this.release(window);
-                this.restore(window, target, parked.original, parked.monitor, displayRect(parked));
+                this._toFullSize(window, parked);
                 continue;
             }
             const distance = {
@@ -526,15 +558,39 @@ export class ParkedWindows {
         }
     }
 
+    // Stashes back to full size when Glance-style dragging is switched off.
+    _glanceChanged() {
+        if (glanceDragging(this._settings))
+            return;
+        for (const [window, parked] of [...this._parked]) {
+            if (!parked.restoring && parked.stash)
+                this._toFullSize(window, parked);
+        }
+    }
+
+    // A tile or stash back to full size, centered where it is drawn, in the
+    // work area.
+    _toFullSize(window, parked) {
+        const {shown, original, monitor} = parked;
+        const target = G.keptIn({
+            x: shown.x + shown.width / 2 - original.width / 2,
+            y: shown.y + shown.height / 2 - original.height / 2,
+            ...original,
+        }, workAreaOf(monitor));
+        this.release(window);
+        this.restore(window, target, original, monitor, displayRect(parked));
+    }
+
     _glideFromFrames() {
         for (const window of this._parked.keys()) {
-            if (this.isParked(window) && window.showing_on_its_workspace())
+            if ((this.isParked(window) || this.isStashed(window)) && window.showing_on_its_workspace())
                 this.glideFrom(window, frameRect(window));
         }
     }
 
     // A tile's window at full size against its edge, centered on the tile
-    // (where a hover preview of it would be), in the work area.
+    // (where a hover preview of it would be), in the work area; a stash's,
+    // centered on it.
     fullAtEdge(window) {
         const parked = this._parked.get(window);
         const frame = frameRect(window);
@@ -542,7 +598,10 @@ export class ParkedWindows {
         const area = workAreaOf(parked.monitor);
         const spot = targetRect(parked);
         let x, y;
-        if (G.isRow(parked.edge)) {
+        if (parked.stash) {
+            x = spot.x + spot.width / 2 - frame.width / 2;
+            y = spot.y + spot.height / 2 - frame.height / 2;
+        } else if (G.isRow(parked.edge)) {
             x = spot.x + spot.width / 2 - frame.width / 2;
             y = parked.edge === G.Edge.TOP ? area.y : area.y + area.height - frame.height;
         } else {
