@@ -226,6 +226,20 @@ export function visibleSize(r, covers, area) {
     return Math.max(0, ...pieces.map(piece => Math.min(piece.width, piece.height)));
 }
 
+// The area of `r` that shows inside `area` under `covers`.
+function visibleArea(r, covers, area) {
+    const x = Math.max(r.x, area.x);
+    const y = Math.max(r.y, area.y);
+    const width = Math.min(r.x + r.width, area.x + area.width) - x;
+    const height = Math.min(r.y + r.height, area.y + area.height) - y;
+    if (width <= 0 || height <= 0)
+        return 0;
+    let pieces = [{x, y, width, height}];
+    for (const cover of covers)
+        pieces = pieces.flatMap(piece => subtract(piece, cover));
+    return pieces.reduce((sum, piece) => sum + piece.width * piece.height, 0);
+}
+
 // How much of `length` each of `widths` gets: equal shares, but none more
 // than its own width.
 function strips(widths, length) {
@@ -242,7 +256,8 @@ function strips(widths, length) {
 // aside of `center`, inside `room` (smaller if they don't fit): the first
 // `split` of them from the left to its left, the rest to its right. On each
 // side, the higher in the stack the nearer to `center`, so that each shows a
-// strip beyond the ones above it, on the side away from `center`. One so wide
+// strip beyond the ones above it, on the side away from `center`, and (with
+// more than one on a side) cascading down the room. One so wide
 // it would pass the room's far end stops there, and those below it go beyond
 // it.
 function layoutAside(center, room, windows, moving, split) {
@@ -258,6 +273,13 @@ function layoutAside(center, room, windows, moving, split) {
             : [center.x + center.width, room.x + room.width];
         const topFirst = [...indices].sort((a, b) => b - a);
         let reach = atLeft ? end : start;
+        // With more than one on a side, they cascade down the room too: the
+        // farthest (lowest in the stack) at the top, the nearest at the
+        // bottom, so each also shows its top above the ones over it.
+        const last = topFirst.length - 1;
+        const cascadeY = (r, n) => last > 0
+            ? room.y + Math.max(0, room.height - r.height) * (last - n) / last
+            : r.y + shiftInto(r.y, r.height, room.y, room.height);
         topFirst.forEach((i, n) => {
             const r = fitted(i);
             const below = topFirst.slice(n).map(j => fitted(j).width);
@@ -268,7 +290,7 @@ function layoutAside(center, room, windows, moving, split) {
             placed[i] = {
                 ...r,
                 x: Math.round(x),
-                y: r.y + shiftInto(r.y, r.height, room.y, room.height),
+                y: Math.round(cascadeY(r, n)),
             };
         });
     };
@@ -285,7 +307,11 @@ function layoutAside(center, room, windows, moving, split) {
 // possible, moving them the least. One out of its way stays unless it is
 // hidden or hides another that can't show otherwise. Staying in `room`, not
 // all can always show: a window that fills it leaves no room beside it.
-export function placeAround(center, room, area, windows) {
+//
+// `fixed` are windows that don't move (stashes), as {rect, under}: `under`
+// the indices of the `windows` above them in the stack. The sides are
+// chosen so that they too still show if they can.
+export function placeAround(center, room, area, windows, fixed = []) {
     const all = [...windows.keys()];
     const moving = new Set(all.filter(i => overlaps(windows[i], center)));
     for (;;) {
@@ -293,13 +319,17 @@ export function placeAround(center, room, area, windows) {
         for (let split = 0; split <= moving.size; split++) {
             const placed = layoutAside(center, room, windows, moving, split);
             const shown = placed.map((r, i) => visibleSize(r, [center, ...placed.slice(i + 1)], area));
+            const fixedShown = fixed.map(({rect, under}) =>
+                visibleSize(rect, [center, ...under.map(i => placed[i])], area));
             const tried = {
                 placed, shown,
-                hidden: shown.filter(size => size < minVisible).length,
-                worst: Math.min(wellVisible, ...shown),
+                hidden: [...shown, ...fixedShown].filter(size => size < minVisible).length,
+                worst: Math.min(wellVisible, ...shown, ...fixedShown),
+                total: placed.reduce((sum, r, i) => sum + visibleArea(r, [center, ...placed.slice(i + 1)], area), 0),
                 moved: placed.reduce((sum, r, i) => sum + Math.abs(r.x - windows[i].x) + Math.abs(r.y - windows[i].y), 0),
             };
-            if (!best || (tried.hidden - best.hidden || best.worst - tried.worst || tried.moved - best.moved) < 0)
+            if (!best || (tried.hidden - best.hidden || best.worst - tried.worst ||
+                best.total - tried.total || tried.moved - best.moved) < 0)
                 best = tried;
         }
         const hidden = all.filter(i => best.shown[i] < minVisible);

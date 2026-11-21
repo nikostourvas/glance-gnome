@@ -160,8 +160,8 @@ export class Declutter {
     // `target` to the middle of the work area, at its size (smaller only if
     // it doesn't fit), and the windows in its way pushed aside, gliding
     // there, never over the enabled edges' tiles (G.clearOfTiles), and so
-    // that all of them still show if they can (G.placeAround). Tiles and
-    // stashes stay.
+    // that all of them, and the stashes, still show if they can
+    // (G.placeAround). Tiles and stashes stay.
     async _center(target, monitor, layout) {
         const others = this._windows(monitor).filter(w => w !== target && !this._held(w));
         await this._unmaximize([target, ...others]);
@@ -183,7 +183,15 @@ export class Declutter {
         const room = G.clearOfTiles(screenOf(monitor), area, enabledEdges(this._settings));
         const stacked = global.display.sort_windows_by_stacking(others);
         const rects = stacked.map(frameRect);
-        G.placeAround(center, room, area, rects).forEach((place, i) => {
+        // Stashes stay, and the others go where they leave them showing.
+        const order = global.display.sort_windows_by_stacking([...others,
+            ...this._windows(monitor).filter(w => w !== target && this._parking.isStashed(w))]);
+        const fixed = order.filter(w => this._parking.isStashed(w)).map(w => ({
+            rect: this._parking.drawnRect(w),
+            under: order.slice(order.indexOf(w) + 1).filter(o => !this._parking.isStashed(o))
+                .map(o => stacked.indexOf(o)),
+        }));
+        G.placeAround(center, room, area, rects, fixed).forEach((place, i) => {
             const rect = rects[i];
             if (place.x !== rect.x || place.y !== rect.y || place.width !== rect.width || place.height !== rect.height) {
                 this._parking.restore(stacked[i], place, {width: place.width, height: place.height},
@@ -318,6 +326,10 @@ export class Declutter {
         const open = new Set(global.get_window_actors().map(a => a.meta_window));
         for (const {window, parked, frame, maximized, unmaximized} of last.saved) {
             if (!open.has(window))
+                continue;
+            // Centering moves no tiles or stashes, so undoing it leaves
+            // those alone, also ones parked, stashed or unparked since.
+            if (last.target && (parked || this._held(window)))
                 continue;
             const from = this._parking.drawnRect(window);
             const current = this._parking.get(window);

@@ -51,6 +51,14 @@ const smallRoom = G.clearOfTiles(rect(0, 0, 1280, 800), small, [G.Edge.LEFT, G.E
     check('the one hiding it stays', b.x === 1950 && b.y === 200, JSON.stringify(b));
 }
 {
+    const center = centered(big, 1400, 1200);
+    const stash = {rect: rect(200, 500, 360, 240), under: [0, 1, 2]};
+    const same = () => rect(800, 200, 1200, 900);
+    const placed = G.placeAround(center, bigRoom, big, [same(), same(), same()], [stash]);
+    const shown = G.visibleSize(stash.rect, [center, ...placed], big);
+    check('a stash at a side still shows', shown >= G.wellVisible, JSON.stringify([shown, placed]));
+}
+{
     const center = centered(big, 360, 616);
     const wide = () => rect(600, 150, 1800, 1200);
     const placed = G.placeAround(center, bigRoom, big, [wide(), wide(), wide(), wide()]);

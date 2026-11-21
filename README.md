@@ -56,8 +56,10 @@ The Super key (Windows / Meta) is the window system's key:
 
 - **Super + double-click a window** to focus on it: it moves to the middle
   of the screen at its size (smaller only if it doesn't fit), and the
-  windows in its way fan out to its left and right, so each still shows if
-  it can: the higher in the stack, the nearer the middle. They always leave
+  windows in its way fan out to its left and right, split between the sides
+  so that as much of them as possible shows, and cascade down the screen:
+  the higher in the stack, the nearer the middle and the lower. Tiles and
+  stashes stay where they are, and the others avoid covering the stashes. They always leave
   room for the tiles and keep their size unless they don't fit. Do it again
   to undo.
 - **Super + double-click a tile** (or a stash) to unpark it: the window goes
