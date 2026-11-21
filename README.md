@@ -131,7 +131,8 @@ update of the extension.
 
 ## Installing
 
-From a release: download the `.shell-extension.zip` and run
+From a [release](https://github.com/nikostourvas/glance-gnome/releases):
+download `glance-gnome@nikostourvas.github.io.shell-extension.zip` and run
 
     gnome-extensions install --force glance-gnome@nikostourvas.github.io.shell-extension.zip
 
