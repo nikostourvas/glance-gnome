@@ -1,74 +1,121 @@
 # Glance for GNOME
 
-A GNOME Shell extension that parks windows at the screen edges. Drag a
-window toward an edge and it shrinks; let go and it becomes a small, live
-tile there. Hover a tile to see and use the window at full size.
+An experiment in window management for GNOME Shell, inspired by Scott
+Jenson's [Glance](https://github.com/scottjenson/Glance) for KDE Plasma.
 
-Inspired by Scott Jenson's [Glance](https://github.com/scottjenson/Glance), a
-window-management experiment for wide monitors on KDE Plasma, whose design
-and rules it builds on, with its own changes (see [Differences from
-Glance](#differences-from-glance)).
+The middle of the screen is where you work. This extension treats the edges
+as a place to keep windows you still want at hand: drag a window to a side
+and it becomes a small tile there, like an icon on a shelf, yet it stays
+live and usable. Rest the pointer on a tile to see and use the window at
+full size.
 
-## Features
+## How it works
 
-- **Parking.** Drag a window toward an enabled screen edge (left and right
-  by default; top and bottom in the settings). It stays full size until
-  the pointer comes within that edge's zone (2% of the screen width by
-  default), then shrinks around the pointer. Windows of any size can be
-  placed anywhere as long as the pointer stays out of the zones. Drop it in
-  a zone and it becomes a 180 px
-  tile in a column at a side, or a row at the top or bottom. Tiles stay
-  live and usable: clicks, typing, scrolling and menus work. The app keeps
-  its size; it is only drawn small. Each tile shows its app's icon, as the
-  overview does.
-- **Glance-style dragging and stashes** (a setting, off by default): as in
-  Glance for KDE, a dragged window shrinks once its edge comes within a
-  quarter of the screen of an enabled edge, the closer the smaller. Drop it
-  there and it stays where and as small as it is, still usable (a stash);
-  drop it with the pointer in the edge zone, or at tile size, and it parks.
-  Drag a stash out of the zone to give it its full size back. Where the
-  shrinking starts and how small it gets before the edge zone are
-  settings.
-- **Hover previews.** Rest the pointer on a tile and it grows in place to
-  the window's full size (at most 60% of the screen wide; X11 apps: see
-  Known limitations). The other tiles
-  in its line move out of the way, so the whole preview can be used. Move
-  onto another tile to switch to it; leave and it shrinks back.
-- **Unparking.** Super+double-click a tile (or stash) and the window goes back to its
-  size and to where it was before it was parked. Or drag a tile back into
-  the middle of the screen: the window gets its size back where it is
-  dropped. Tiles are easiest to drag with Super+drag (from anywhere in the
-  tile).
-- **Centering.** Super+double-click a (not parked) window: it moves to the
-  middle of the screen at its size (smaller only if it doesn't fit), and the
-  windows in its way fan out to its left and right, so that each still
-  shows if it can: the higher in the stack, the nearer the middle. They
-  always leave room for tiles at the edges, and keep their size unless they
-  don't fit in what is left. A window out of the way stays where it is,
-  unless it is hidden.
-  Handy to bring what you are working on straight ahead.
-  Super+double-click the empty desktop to park every window (stashes
-  too). The same
-  Super+double-click again undoes it.
-- **Shake.** Shake a window from side to side while dragging it, and every
-  other window is parked, stashes too. With Glance-style dragging, a
-  setting stashes them instead, as in Glance.
-- Each workspace has its own columns and rows of tiles (tiles of windows
-  on all workspaces join the current one's).
-- Switching workspaces, tiles slide along as tiles. Opening the overview, a
-  parked window grows from its edge (where its hover preview would be)
-  into the grid, and shrinks back into its tile when it closes. (This
-  changes GNOME's own animations, which can change between GNOME
-  releases: each change is only made if GNOME's code is as expected, falls
-  back to GNOME's own behaviour on any error, and can be turned off in the
-  settings.) Tiles follow resolution, scale and monitor changes, and panels
-  coming or going.
+The screen has two kinds of areas, three with Glance-style dragging on:
 
-## Requirements
+- **The middle:** windows here are full size, wherever and however large
+  they are.
+- **Edge zones:** a thin strip along each enabled edge (left and right by
+  default, 2% of the screen width). A window dragged with the pointer in a
+  zone shrinks; dropped there, it parks.
+- **Parking:** the tiles themselves, in a column at each side, or a row at
+  the top or bottom.
+- **Stash** (only with Glance-style dragging, see Settings): the wider band
+  between the middle and an edge, where windows shrink as they near the
+  edge and stay as small as they are drawn.
 
-GNOME Shell 50 on Wayland. Developed on Fedora 44 (Bluefin).
+Key mechanics:
 
-## Installation
+- **Dragging a window toward an edge shrinks it.** It stays full size until
+  the pointer enters an edge zone, then shrinks around the pointer, the
+  closer to the edge the smaller.
+- **Dropping it in the zone parks it** as a 180 px tile. The tiles of each
+  edge keep to a centered line, which rearranges itself as windows come
+  and go. Each tile shows its app's icon, as the overview does.
+- **Tiles stay usable.** You can click, type and scroll in them, and their
+  menus open. The app keeps its size; it is only drawn small.
+- **Hover over a tile to read it:** it grows in place to the window's full
+  size (at most 60% of the screen wide), and the other tiles in its line
+  move out of the way. Move onto another tile to switch to it; leave and it
+  shrinks back.
+- **Dragging a tile back into the middle** gives the window its size back,
+  where it is dropped. Tiles are easiest to grab with Super+drag, from
+  anywhere in the tile.
+- **Shake a window** from side to side while dragging it, and every other
+  window is parked.
+- **Each workspace has its own tiles** (windows shown on all workspaces join
+  the current one's). Switching workspaces, tiles slide along as tiles; in
+  the overview, a parked window grows out of its edge into the grid and
+  shrinks back into its tile when the overview closes.
+- **Tiles follow the screen:** resolution, scale and monitor changes, and
+  panels coming or going.
+
+## Gestures
+
+The Super key (Windows / Meta) is the window system's key:
+
+- **Super + double-click a window** to focus on it: it moves to the middle
+  of the screen at its size (smaller only if it doesn't fit), and the
+  windows in its way fan out to its left and right, so each still shows if
+  it can: the higher in the stack, the nearer the middle. They always leave
+  room for the tiles and keep their size unless they don't fit. Do it again
+  to undo.
+- **Super + double-click a tile** (or a stash) to unpark it: the window goes
+  back to its size and to where it was before it was parked.
+- **Super + double-click the empty desktop** to park every window. Do it
+  again to undo.
+- **Super + drag** moves a window or tile from anywhere inside it.
+
+## Settings
+
+In the extension's preferences (the Extensions app, Extension Manager, or
+`gnome-extensions prefs glance-gnome@nikostourvas.github.io`). The
+**Settings** tab has:
+
+- **Parking areas:** which screen edges park windows. The top and bottom
+  rows sit inside the usable area, below the top bar and above any bottom
+  panel. The bottom works best on large screens.
+- **Edge zone width:** how close to an edge the pointer must come, in
+  percent of the screen width (1-20%, default 2%), for a dragged window to
+  shrink and park.
+- **Drag and stash as in Glance** (off by default): Glance's own rule
+  instead. A dragged window shrinks once its edge (not the pointer) comes
+  near an enabled screen edge, the closer the smaller. Dropped there, it
+  stays where and as small as it is, still usable (a stash); dropped with
+  the pointer in the edge zone, or once at tile size, it parks. Drag a
+  stash back to the middle to give it its full size. Under it:
+  - **Start shrinking at:** how far from the screen edge the window's edge
+    starts shrinking, in percent of the screen (5-50%, default 25% as in
+    Glance).
+  - **Shrink down to:** the smallest a window gets before the edge zone, in
+    percent of its size (15-90%, default 15% as in Glance); in the edge
+    zone it goes on to tile size.
+  - **Shake stashes instead of parking:** shaking a window, or
+    Super+double-clicking the desktop, puts the other windows (and the
+    stashes already there) in a column beside the tiles at each side, at
+    one common scale, as in Glance.
+
+  Switching Glance-style dragging off gives stashed windows their full size
+  back.
+- **Tiles in overview and workspace switches** (on by default): keep parked
+  windows as tiles in those animations. This changes GNOME's own
+  animations, which can change between GNOME releases: each change is only
+  made if GNOME's code is as expected and falls back to GNOME's own
+  behaviour on any error, but if a GNOME update breaks them, turn this off.
+
+Dialogs, like the settings window itself, don't shrink, park or stash. An
+**About** tab credits Glance and its author. Changes apply at once; tiles at
+an edge that is switched off move to the nearest edge still on, or back to
+full size if none is.
+
+## Status
+
+Early and experimental. It runs on GNOME Shell 50 and 51 (Wayland) and is
+developed on Fedora 45 (Bluefin) with GNOME 51. It relies on parts of
+GNOME Shell that are not a stable API, so a new GNOME release may need an
+update of the extension.
+
+## Installing
 
 From a release: download the `.shell-extension.zip` and run
 
@@ -88,35 +135,6 @@ and enable it:
 or with the Extensions app or Extension Manager. To update, install again
 and log out and back in. To remove it:
 `gnome-extensions uninstall glance-gnome@nikostourvas.github.io`.
-
-## Settings
-
-In the extension's preferences (Extensions app, Extension Manager, or
-`gnome-extensions prefs glance-gnome@nikostourvas.github.io`):
-
-- **Parking areas:** which screen edges park windows. The top and bottom
-  rows sit inside the usable area, below the top bar and above any bottom
-  panel. The bottom works best on large screens.
-- **Edge zone width:** how close to an edge the pointer must come, in
-  percent of the screen width (1-20%), for a dragged window to shrink and
-  park.
-- **Drag and stash as in Glance:** Glance's zones and stashes instead (see
-  above). Under it: **Start shrinking at** (the window's edge this far from
-  the screen edge, 5-50% of the screen, default 25% as in Glance) and
-  **Shrink down to** (the smallest a window gets before the edge zone,
-  15-90% of its size, default 15% as in Glance); in the edge zone it goes
-  on to tile size. And **Shake stashes instead of parking**: shaking a
-  window, or Super+double-clicking the desktop, puts the other windows
-  (and the stashes already there) in a column beside the tiles at each
-  side, at one common scale, as in Glance. Switching it off gives stashed windows their full size
-  back.
-- **Tiles in overview and workspace switches:** keep parked windows as
-  tiles in those animations (on by default; see above).
-
-An **About** tab credits Glance and its author.
-
-Changes apply at once. Tiles at an edge that is switched off move to the
-nearest edge still on, or back to full size if none is.
 
 ## Compatibility
 
@@ -158,7 +176,7 @@ and can park at the top and bottom. Left out: tilted
 tiles, grabbing tiles anywhere without Super, minimize = park, Meta+arrows,
 Meta+drag acceleration, Meta+wheel, the Alt+Tab map and clips.
 
-## How it works
+## Under the hood
 
 A window is drawn somewhere other than its frame by scaling and moving its
 window actor (`extension/draw.js`). Unlike KWin, Mutter maps pointer input
