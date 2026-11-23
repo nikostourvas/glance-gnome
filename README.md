@@ -26,7 +26,8 @@ The screen has three kinds of areas:
   the top or bottom.
 - **Stash** (at edges stashing is on at: left and right by default, see
   Settings): the band between the middle and an edge, where windows shrink
-  as they near the edge and stay as small as they are drawn.
+  as they near the edge and stay as small as they are drawn. Stashing can
+  be switched off, leaving only parking.
 
 Key mechanics:
 
@@ -141,7 +142,11 @@ In the extension's preferences (the Extensions app, Extension Manager, or
   it is stashed even at the very edge. Stashes never cover tiles: at an
   edge with tiles, a stash over their strip slides inward until it clears
   it. Drag a stash back to the middle to give it its full size. Switching
-  stashing off at an edge gives its stashes their full size back.
+  stashing off at an edge gives its stashes their full size back. Switch
+  it off at every edge to do without stashes: a dragged window then stays
+  full size until the pointer reaches an edge zone, and parks there, and
+  shaking parks the other windows. Super + triple-click still lines
+  windows up as stashes in its grid.
 - **Start shrinking at:** how far from the screen edge the window's edge
   starts shrinking, in percent of the screen (5-50%, default 5%; Glance's
   is 25%).
@@ -159,6 +164,20 @@ In the extension's preferences (the Extensions app, Extension Manager, or
 Dialogs, like the settings window itself, don't shrink, park or stash.
 Changes apply at once; tiles at an edge parking is switched off at move to
 the nearest edge still on, or back to full size if none is.
+
+## Suggested GNOME setting
+
+GNOME can maximize a window only vertically: it gets the full height of
+the screen and keeps its width, so there is still room beside it. Setting
+a middle-click on a title bar to do that (by default it does nothing)
+goes well with this extension. GNOME Tweaks doesn't offer this option,
+so set it in a terminal:
+
+    gsettings set org.gnome.desktop.wm.preferences action-middle-click-titlebar 'toggle-maximize-vertically'
+
+Then middle-click a window's title bar to maximize it vertically, and
+again to give it its size back. To undo the setting:
+`gsettings reset org.gnome.desktop.wm.preferences action-middle-click-titlebar`.
 
 ## Status
 
