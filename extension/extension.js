@@ -6,6 +6,7 @@
 // - draw.js: drawing a window somewhere other than its frame; menus follow.
 // - drag.js: shrinking while dragging.
 // - parking.js: parked windows, their columns and rows.
+// - struts.js: the work area leaves out the tiles' strips.
 // - icons.js: each tile shows its app's icon.
 // - previews.js: hovering a tile grows it.
 // - declutter.js: Super+double-click centers a window or parks everything;
@@ -27,6 +28,7 @@ import {CloseAnimations, Popups} from './draw.js';
 import {ShellPatches} from './overview.js';
 import {ParkedWindows} from './parking.js';
 import {HoverPreviews} from './previews.js';
+import {TileStruts} from './struts.js';
 
 // It stays enabled in the unlock dialog (metadata.json session-modes): else
 // every screen lock would put all parked windows back to full size. Nothing
@@ -39,6 +41,7 @@ export default class GlanceExtension extends Extension {
         this._popups = new Popups();
         this._closeAnimations = new CloseAnimations();
         this._parking = new ParkedWindows(this._settings);
+        this._struts = new TileStruts(this._parking);
         this._shellPatches = null;
         this._syncShellPatches();
         this._settings.connectObject('changed::patch-overview', () => this._syncShellPatches(), this);
@@ -55,12 +58,13 @@ export default class GlanceExtension extends Extension {
         this._declutter.destroy();
         this._settings.disconnectObject(this);
         this._shellPatches?.destroy();
+        this._struts.destroy();
         this._parking.destroy();
         this._popups.destroy();
         this._closeAnimations.destroy();
         this._closeAnimations = null;
         this._previews = this._drag = this._tilingAssistant = this._declutter = this._shellPatches = null;
-        this._parking = this._popups = null;
+        this._parking = this._popups = this._struts = null;
         this._settings = null;
         this._restoreEdgeTiling();
     }

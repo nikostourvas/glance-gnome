@@ -77,6 +77,9 @@ export class ParkedWindows {
         this._later = 0;
         this._timeouts = new Set();
         this._ticker = new Ticker(() => this._advance());
+        // Called when a window becomes or stops being a tile, or its edge,
+        // monitor or workspace changes (see struts.js).
+        this.onTilesChanged = null;
         // Without the overview patched (see overview.js), the overview shows
         // parked windows at full size where their frames are, and its copies
         // fly back there as it closes: tiles then glide in from there.
@@ -417,13 +420,17 @@ export class ParkedWindows {
                 'position-changed', queue,
                 'size-changed', queue,
                 'shown', queue,
-                'workspace-changed', () => this._queueArrangeAll(),
+                'workspace-changed', () => {
+                    this._queueArrangeAll();
+                    this.onTilesChanged?.();
+                },
                 'unmanaged', () => this._closed(window), this);
             // The shell's own animations (minimize, maximize) reset the
             // actor's scale when they finish.
             window.get_compositor_private()?.connectObject('transitions-completed', queue, this);
         }
         this._parked.set(window, {animating: false, ...parked});
+        this.onTilesChanged?.();
     }
 
     _forget(window) {
@@ -432,6 +439,7 @@ export class ParkedWindows {
         this._parked.delete(window);
         this._dirty.delete(window);
         this._icons.remove(window);
+        this.onTilesChanged?.();
     }
 
     _closed(window) {
